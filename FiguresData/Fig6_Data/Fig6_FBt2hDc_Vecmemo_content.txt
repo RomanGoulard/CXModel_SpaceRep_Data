@@ -1,0 +1,3 @@
+16 columns:
+
+	- FBt-to-hΔ synaptic weight by FB column (to hΔ #1-#16)
