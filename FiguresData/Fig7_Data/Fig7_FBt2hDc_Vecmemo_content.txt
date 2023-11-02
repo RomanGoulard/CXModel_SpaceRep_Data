@@ -1,0 +1,3 @@
+16 columns:
+
+	- FBt-to-PFN synaptic weight by FB column (to PFN #1-#16)

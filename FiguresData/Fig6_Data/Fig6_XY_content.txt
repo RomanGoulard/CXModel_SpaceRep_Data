@@ -1,0 +1,9 @@
+7 columns:
+	
+	- X position
+	- Y position
+	- Z position (constant -> walking agent)
+	- Roll (constant)
+	- Pitch (constant)
+	- Yaw (Orientation)
+	- Reward state (binary: 0 or 1)
