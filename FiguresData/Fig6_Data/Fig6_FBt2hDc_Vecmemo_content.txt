@@ -1,3 +1,3 @@
-16 columns:
+16 columns (x3 for 3 different FBt):
 
-	- FBt-to-hΔ synaptic weight by FB column (to hΔ #1-#16)
+	- FBt-to-hΔ synaptic weight by FB column (PI memory to hΔ #33-#48)
