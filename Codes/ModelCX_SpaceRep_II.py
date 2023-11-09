@@ -21,7 +21,6 @@ import scipy.io as spio
 from scipy import stats
 import matplotlib.pyplot as mp
 import datetime
-from tabulate import tabulate
 
 RNG = np.random.RandomState(2018)
 
