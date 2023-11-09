@@ -18,7 +18,7 @@ import tkinter as tk
 from tkinter import filedialog, ttk
 import tkinter.font as font
 import scipy.io as spio
-from scipy import stats
+# from scipy import stats
 import matplotlib.pyplot as mp
 import datetime
 
@@ -458,24 +458,24 @@ class Eye_obj:
             angle_z = np.linspace(-radius[1], radius[1], num=nb_ommat[1])
 
         ##############################
-        elif method == 'gaussian':
-            if fovea_loc is None:
-                fovea_loc = [0, 0]
-
-            fovea_loc = [fovea_loc[0] - ori_gen[0],
-                         fovea_loc[1] - ori_gen[1]]
-
-            distribution_y = stats.norm(loc=fovea_loc[0], scale=std_hor)
-            # percentile point, the range for the inverse cumulative distribution function:
-            bounds_for_range_y = distribution_y.cdf([-radius[0], radius[0]])
-
-            distribution_z = stats.norm(loc=fovea_loc[1], scale=std_ver)
-            # percentile point, the range for the inverse cumulative distribution function:
-            bounds_for_range_z = distribution_z.cdf([-radius[1], radius[1]])
-
-            # Linspace for the inverse cdf:
-            angle_y = distribution_y.ppf(np.linspace(*bounds_for_range_y, num=nb_ommat[0]))
-            angle_z = distribution_z.ppf(np.linspace(*bounds_for_range_z, num=nb_ommat[1]))
+        # elif method == 'gaussian':
+        #     if fovea_loc is None:
+        #         fovea_loc = [0, 0]
+        #
+        #     fovea_loc = [fovea_loc[0] - ori_gen[0],
+        #                  fovea_loc[1] - ori_gen[1]]
+        #
+        #     distribution_y = stats.norm(loc=fovea_loc[0], scale=std_hor)
+        #     # percentile point, the range for the inverse cumulative distribution function:
+        #     bounds_for_range_y = distribution_y.cdf([-radius[0], radius[0]])
+        #
+        #     distribution_z = stats.norm(loc=fovea_loc[1], scale=std_ver)
+        #     # percentile point, the range for the inverse cumulative distribution function:
+        #     bounds_for_range_z = distribution_z.cdf([-radius[1], radius[1]])
+        #
+        #     # Linspace for the inverse cdf:
+        #     angle_y = distribution_y.ppf(np.linspace(*bounds_for_range_y, num=nb_ommat[0]))
+        #     angle_z = distribution_z.ppf(np.linspace(*bounds_for_range_z, num=nb_ommat[1]))
 
         elif method == 'dispersion':
             angle_correction = wrapTo180(np.random.uniform(0, 360, 1)[0])
@@ -1774,6 +1774,7 @@ class Agent_sim(pyglet.window.Window):
             self.Exploration = 1
         elif self.Scenario == 'VM':
             self.VecMemo = 1
+            self.FindFood = False
         elif self.Scenario == 'VM2':
             self.VecMemo = 1
         elif self.Scenario == 'MB':
@@ -2153,10 +2154,16 @@ class Agent_sim(pyglet.window.Window):
             self.Visatt_rewardvalue = self.VisRew
             if not self.Sight:
                 self.Sight = True
+
         elif (self.Scenario == 'MB') & (self.MB_output < 0.01):
             self.DAN_FBt_pfn[0] = 1.0
             self.DAN_FBt_hdc[0] = 1.0
             self.Visatt_rewardvalue = 1.0#self.MB_output
+
+        elif self.Scenario == 'VM':
+            if self.FindFood:
+                self.DAN_FBt_hdc[2] = 1.0
+                self.FindFood = False
 
         elif (self.Scenario == 'FS'):
             if self.BrainType == 'Settled':
@@ -2455,7 +2462,6 @@ class Agent_sim(pyglet.window.Window):
                             self.reset_Homing = True
                             self.it = 0
 
-
                     elif self.MB_LearnParadigm == 'ZigzagRoute':
                         if self.it_Route == 0:
                             self.turn_sign = np.sign(np.random.uniform(-1, 1, 1)[0])
@@ -2542,7 +2548,8 @@ class Agent_sim(pyglet.window.Window):
                 elif self.Scenario == 'VM':
                     if (self.VecMemo == 1) & (dist2nest > 200) & self.Back:
                         self.Food = 1
-                        self.DAN_FBt_hdc[2] = 1
+                        self.FindFood = True
+                        # self.DAN_FBt_hdc[2] = 1
                         print('---> Limit reached')
                         print('Target at coordinates: X =', str(self.translation_x[0]),'| Y =', str(self.translation_y[0]))
                         self.Target_location = [self.translation_x , self.translation_y]
