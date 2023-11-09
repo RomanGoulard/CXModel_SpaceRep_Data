@@ -21,6 +21,9 @@ import scipy.io as spio
 # from scipy import stats
 import matplotlib.pyplot as mp
 import datetime
+import warnings
+
+warnings.filterwarnings("ignore")
 
 RNG = np.random.RandomState(2018)
 
@@ -490,8 +493,7 @@ class Eye_obj:
             nb_ommat_tot = 1
 
             while r < 180:
-                angles = wrapTo180(np.linspace(0, 360 - 360 / (np.floor(nb_ommat / 2) * 2), np.floor(nb_ommat / 2) * 2)
-                                   + angle_correction + 0 * np.random.normal(0.0, 20.0, 1)[0])
+                angles = wrapTo180(np.linspace(0, 360 - 360 / (np.floor(nb_ommat / 2) * 2), int(np.floor(nb_ommat / 2) * 2)) + angle_correction)
                 noise_az = np.random.normal(0.0, 0.1, int(np.floor(nb_ommat / 2) * 2))
                 azimuth = noise_az + np.cos(np.radians(angles)) * r
                 noise_el = np.random.normal(0.0, 0.1, int(np.floor(nb_ommat / 2) * 2))
@@ -2233,6 +2235,7 @@ class Agent_sim(pyglet.window.Window):
             self.it_Route = 0
 
         elif self.it == 50:
+            print('Simulation started')
             self.it += 1
             self.snapcount = 0
         else:
@@ -2890,10 +2893,10 @@ def generate_random_kc3(nb_pn, nb_kc, min_pn=10, max_pn=21, limits='strict', pot
             # nb_con = rnd.randint(min_pn, max_pn+1)
             center = min_pn + (max_pn-min_pn)/2
             std = (max_pn-min_pn)/4
-            nb_con = int(np.random.normal(center, std, 1))
+            nb_con = int(np.random.normal(center, std))
             if limits == 'stricts':
                 while (nb_con < min_pn) | (nb_con > max_pn):
-                    nb_con = int(np.random.normal(center, std, 1))
+                    nb_con = int(np.random.normal(center, std))
 
             vaff_pn2kc = rnd.permutation(nb_pn)
             pn_con = vaff_pn2kc[0:nb_con]
@@ -3140,10 +3143,10 @@ if __name__ == "__main__":
         else:
             search = 'OFF'
 
-    ScriptName = __file__[target+1:]
-    src = ScriptName
-    dst = name_folder + 'SimuCode.py'
-    shutil.copyfile(src, dst)
+    # ScriptName = __file__[target+1:]
+    # src = ScriptName
+    # dst = name_folder + 'SimuCode.py'
+    # shutil.copyfile(src, dst)
     filetxt_params = open(name_folder + "Obj_parameters_exp.txt", "a")
     filetxt_params.write('Exp' + '\t'
                          + 'Object' + '\t'
