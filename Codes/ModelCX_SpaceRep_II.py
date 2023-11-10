@@ -1,14 +1,15 @@
-#!/usr/bin/env python
-"""This script shows an example of using the PyWavefront module."""
+#!/usr/bin/env python3
+
+
 import os
 import math
-import cv2
-from pyglet.gl import *
+# import cv2
 from OpenGL.GL import *
+import pyglet
+from pyglet.gl import *
 # from pyglet.gl.wglext_nv import *
 import numpy as np
 import pyautogui
-import pyglet
 from PIL import Image
 import time
 import random
@@ -71,52 +72,52 @@ def angle_to_coords(theta, phi, radius):
     return x * radius, y * radius, z * radius
 
 
-def read_texture(filename):
-    size = (512, 512)
-
-    img = Image.open(filename)
-
-    lim = 90# * np.sqrt(2)
-
-    img_RotCoord = [np.linspace(-lim, lim, img.size[0]),
-                    np.linspace(-lim, lim, img.size[1])]
-
-    Xdisp = np.linspace(0, 180, img.size[0])
-    Ydisp = np.linspace(0, 360, img.size[1]) - 180
-    disp_RotCoord = [Xdisp,
-                     Ydisp]
-    # disp_RotCoord[0][disp_RotCoord[0] > 180] -= 360
-    # print(disp_RotCoord)
-
-    img_mat = np.array(img.getdata(), np.uint8).reshape(img.size[0], img.size[1], 3)
-    DispMap = np.zeros(img_mat.shape)
-
-    for ix in range(img_mat.shape[0]):
-        for iy in range(img_mat.shape[1]):
-            CoordInput_theta = np.degrees(np.arctan2(img_RotCoord[0][ix], img_RotCoord[1][iy]))
-            CoordInput_rho = np.sqrt(img_RotCoord[0][ix]**2 + img_RotCoord[1][iy]**2)# * np.tan(np.radians(CoordInput_theta))
-
-            Disp_x = int(np.argmin(abs(disp_RotCoord[0][:] - CoordInput_rho)))
-            Disp_y = int(np.argmin(abs(disp_RotCoord[1][:] - CoordInput_theta)))
-
-            DispMap[Disp_x, Disp_y, :] = img_mat[ix, iy, :]
-
-    img2 = cv2.resize(DispMap, size, interpolation=cv2.INTER_AREA)
-    # img2filt = np.array(img.getdata(), np.float).reshape(img.size[0], img.size[1], 3)
-
-    # img2 = filtImg(img2, 'lowpass', (2, 1.0))
-    # img2 = filtImg(img2, 'highpass', (20, 1.0))
-
-    img = Image.fromarray(np.uint8(img2))
-
-    # print(img)
-
-    img_data = np.array(list(img.getdata()), np.uint8)
-
-    # print(np.unique(img_data))
-
-    textID = glGenTextures(1)
-    return textID, img_data, img
+# def read_texture(filename):
+#     size = (512, 512)
+#
+#     img = Image.open(filename)
+#
+#     lim = 90# * np.sqrt(2)
+#
+#     img_RotCoord = [np.linspace(-lim, lim, img.size[0]),
+#                     np.linspace(-lim, lim, img.size[1])]
+#
+#     Xdisp = np.linspace(0, 180, img.size[0])
+#     Ydisp = np.linspace(0, 360, img.size[1]) - 180
+#     disp_RotCoord = [Xdisp,
+#                      Ydisp]
+#     # disp_RotCoord[0][disp_RotCoord[0] > 180] -= 360
+#     # print(disp_RotCoord)
+#
+#     img_mat = np.array(img.getdata(), np.uint8).reshape(img.size[0], img.size[1], 3)
+#     DispMap = np.zeros(img_mat.shape)
+#
+#     for ix in range(img_mat.shape[0]):
+#         for iy in range(img_mat.shape[1]):
+#             CoordInput_theta = np.degrees(np.arctan2(img_RotCoord[0][ix], img_RotCoord[1][iy]))
+#             CoordInput_rho = np.sqrt(img_RotCoord[0][ix]**2 + img_RotCoord[1][iy]**2)# * np.tan(np.radians(CoordInput_theta))
+#
+#             Disp_x = int(np.argmin(abs(disp_RotCoord[0][:] - CoordInput_rho)))
+#             Disp_y = int(np.argmin(abs(disp_RotCoord[1][:] - CoordInput_theta)))
+#
+#             DispMap[Disp_x, Disp_y, :] = img_mat[ix, iy, :]
+#
+#     img2 = cv2.resize(DispMap, size, interpolation=cv2.INTER_AREA)
+#     # img2filt = np.array(img.getdata(), np.float).reshape(img.size[0], img.size[1], 3)
+#
+#     # img2 = filtImg(img2, 'lowpass', (2, 1.0))
+#     # img2 = filtImg(img2, 'highpass', (20, 1.0))
+#
+#     img = Image.fromarray(np.uint8(img2))
+#
+#     # print(img)
+#
+#     img_data = np.array(list(img.getdata()), np.uint8)
+#
+#     # print(np.unique(img_data))
+#
+#     textID = glGenTextures(1)
+#     return textID, img_data, img
 
 
 def Polygons_generate(x, y, z, color, dimension, batch=None):
@@ -130,12 +131,15 @@ def Polygons_generate(x, y, z, color, dimension, batch=None):
     if not batch:
         glBegin(GL_QUADS)
         for surface in range(x.shape[0]):
-            glColor((color[surface, 0], color[surface, 1], color[surface, 2]))
+            col_surf = (color[surface, 0], color[surface, 1], color[surface, 2])
+            glColor3fv(col_surf)
             for vertex in range(4):
                 if vertex < 3:
-                    glVertex(x[surface, vertex], z[surface, vertex], y[surface, vertex])
+                    xyz = x[surface, vertex], z[surface, vertex], y[surface, vertex]
+                    glVertex3fv(xyz)
                 else:
-                    glVertex(x[surface, 0], z[surface, 0], y[surface, 0])
+                    xyz = x[surface, 0], z[surface, 0], y[surface, 0]
+                    glVertex3fv(xyz)
         glEnd()
     else:
         for surface in range(x.shape[0]):
@@ -155,8 +159,8 @@ def Cube(color):
         x = 0
         for vertex in surface:
             x += 1
-            glColor3fv(color)
-            glVertex3fv(verticies[vertex])
+            glColor3f(color[0], color[1], color[2])
+            glVertex3f(verticies[vertex][0], verticies[vertex][1], verticies[vertex][2])
     glEnd()
 
 
@@ -200,8 +204,8 @@ def Surface(color):
         x = 0
         for vertex in surface:
             x += 1
-            glColor3fv(color)
-            glVertex3fv(ground_surface[vertex])
+            glColor3f(color[0], color[1], color[2])
+            glVertex3f(ground_surface[vertex][0], ground_surface[vertex][1], ground_surface[vertex][2])
     glEnd()
 
 
@@ -221,27 +225,31 @@ def Cylinder(center, radius, height, num_slices, Color=(0, 0, 0)):
         circle_pts.append(pt)
 
     glBegin(GL_TRIANGLE_FAN)  # drawing the back circle
-    glColor(Color[0], Color[1], Color[2])
+    glColor3f(Color[0], Color[1], Color[2])
     # glVertex(0, h / 2.0, 0)
     for (x, y) in circle_pts:
         z = 0.0
-        glVertex(x, z, y)
+        xyz = (x, z, y)
+        glVertex3f(x, z, y)
     glEnd()
 
     glBegin(GL_TRIANGLE_FAN)  # drawing the front circle
-    glColor(Color[0], Color[1], Color[2])
+    glColor3f(Color[0], Color[1], Color[2])
     # glVertex(0, h / 2.0, 0)
     for (x, y) in circle_pts:
         z = h
-        glVertex(x, z, y)
+        xyz = (x, z, y)
+        glVertex3f(x, z, y)
     glEnd()
 
     glBegin(GL_TRIANGLE_STRIP)  # draw the tube
-    glColor(Color[0], Color[1], Color[2])
+    glColor3f(Color[0], Color[1], Color[2])
     for (x, y) in circle_pts:
         z = h
-        glVertex(x, 0, y)
-        glVertex(x, z, y)
+        x0y = (x, 0, y)
+        glVertex3f(x, 0, y)
+        xyz = (x, z, y)
+        glVertex3f(x, z, y)
     glEnd()
 
 
@@ -261,71 +269,75 @@ def Cone(center, radius, height, num_slices, Color=(0, 0, 0)):
         circle_pts.append(pt)
 
     glBegin(GL_TRIANGLE_FAN)  # drawing the back circle
-    glColor(Color[0], Color[1], Color[2])
+    glColor3f(Color[0], Color[1], Color[2])
     # glVertex(0, h / 2.0, 0)
     for (x, y) in circle_pts:
         z = 0.0
-        glVertex(x, z, y)
+        xyz = (x, z, y)
+        glVertex3f(x, z, y)
     glEnd()
 
     glBegin(GL_TRIANGLE_FAN)  # drawing the front circle
-    glColor(Color[0], Color[1], Color[2])
+    glColor3f(Color[0], Color[1], Color[2])
     # glVertex(0, h / 2.0, 0)
     for (x, y) in circle_pts:
         z = h
-        glVertex(center[1], z, center[0])
+        czc = (center[1], z, center[0])
+        glVertex3f(center[1], z, center[0])
     glEnd()
 
     glBegin(GL_TRIANGLE_STRIP)  # draw the tube
-    glColor(Color[0], Color[1], Color[2])
+    glColor3f(Color[0], Color[1], Color[2])
     for (x, y) in circle_pts:
         z = h
-        glVertex(x, 0, y)
-        glVertex(center[1], z, center[0])
+        x0y = (x, 0, y)
+        glVertex3f(x, 0, y)
+        czc = (center[1], z, center[0])
+        glVertex3f(center[1], z, center[0])
     glEnd()
 
 
-def Sphere(center, radius, facets, Color=(0, 0, 0), elevation=0.0):
-    """approximate a sphere using a certain number of facets"""
+# def Sphere(center, radius, facets, Color=(0, 0, 0), elevation=0.0):
+#     """approximate a sphere using a certain number of facets"""
+#
+#     center = [center[0], -center[1]]
+#
+#     dtheta = 180.0 / facets
+#     dphi = 360.0 / facets
+#
+#     sphere_list = glGenLists(2)
+#     glNewList(sphere_list, GL_COMPILE)
+#
+#     glBegin(GL_QUADS)
+#
+#     for y in range(facets):
+#         theta = y * dtheta - 90
+#         for x in range(facets):
+#             phi = x * dphi
+#             a1 = theta, phi
+#             a2 = theta + dtheta, phi
+#             a3 = theta + dtheta, phi + dphi
+#             a4 = theta, phi + dphi
+#
+#             angles = [a1, a2, a3, a4]
+#
+#
+#             for angle in angles:
+#                 x, y, z = angle_to_coords(np.radians(angle[0]), np.radians(angle[1]), radius)
+#                 x += center[0]
+#                 y += center[1]
+#                 z += elevation
+#                 glColor3fv(Color)
+#                 glVertex(x, z, y)
+#
+#     glEnd()
+#
+#     glEndList()
 
-    center = [center[0], -center[1]]
 
-    dtheta = 180.0 / facets
-    dphi = 360.0 / facets
-
-    sphere_list = glGenLists(2)
-    glNewList(sphere_list, GL_COMPILE)
-
-    glBegin(GL_QUADS)
-
-    for y in range(facets):
-        theta = y * dtheta - 90
-        for x in range(facets):
-            phi = x * dphi
-            a1 = theta, phi
-            a2 = theta + dtheta, phi
-            a3 = theta + dtheta, phi + dphi
-            a4 = theta, phi + dphi
-
-            angles = [a1, a2, a3, a4]
-
-
-            for angle in angles:
-                x, y, z = angle_to_coords(np.radians(angle[0]), np.radians(angle[1]), radius)
-                x += center[0]
-                y += center[1]
-                z += elevation
-                glColor3fv(Color)
-                glVertex(x, z, y)
-
-    glEnd()
-
-    glEndList()
-
-
-def Tree(center, radius, height, num_slices, Color=(0, 0, 0)):
-    Cylinder(center, radius/3, height*0.8, num_slices, Color=Color)
-    Sphere(center, radius, num_slices, Color=Color, elevation=height*0.9)
+# def Tree(center, radius, height, num_slices, Color=(0, 0, 0)):
+#     Cylinder(center, radius/3, height*0.8, num_slices, Color=Color)
+#     Sphere(center, radius, num_slices, Color=Color, elevation=height*0.9)
 
 
 def wrapTo180(angle):
@@ -605,7 +617,7 @@ class Eye_obj:
             # print('\n\n%%%%%')
             # print(iom1, self.Monocular_eye.ommatidies_dir[iom1, 1], self.Monocular_eye.ommatidies_dir[iom1, 0])
 
-            LI_visu = np.zeros((1800, 3600, 3), np.uint8)
+            # LI_visu = np.zeros((1800, 3600, 3), np.uint8)
             dist = np.sqrt((self.ommatidies_dir[:, 0] - self.ommatidies_dir[iom1, 0])**2
                            + (self.ommatidies_dir[:, 1] - self.ommatidies_dir[iom1, 1])**2)
             minimal_dists = np.argsort(dist)
@@ -623,23 +635,23 @@ class Eye_obj:
                     LI_net[iom1, iom2] = NormFactor * 0.8
                     # LI_net[iom1, iom2] = InhibRange - 1.5
 
-                    LI_visu = cv2.circle(LI_visu,
-                                         (int(10 * (self.ommatidies_dir[iom2, 1] + 180)),
-                                          int(10 * (-self.ommatidies_dir[iom2, 0] + 90))),
-                                         int(8 * self.ommatidies_acc[iom2, 0]),
-                                         color=(0, 255, 0),
-                                         thickness=-1)
+                    # LI_visu = cv2.circle(LI_visu,
+                    #                      (int(10 * (self.ommatidies_dir[iom2, 1] + 180)),
+                    #                       int(10 * (-self.ommatidies_dir[iom2, 0] + 90))),
+                    #                      int(8 * self.ommatidies_acc[iom2, 0]),
+                    #                      color=(0, 255, 0),
+                    #                      thickness=-1)
                 else:
                     LI_net[iom1, iom2] = -np.exp(-0.5 * (dist[minimal_dists[imins]]/RatioInhib)**2)
                     # LI_net[iom1, iom2] = -1.0
                     # print(dist[minimal_dists[imins]], RatioInhib, self.LatInhib[iom1, iom2])
 
-                    LI_visu = cv2.circle(LI_visu,
-                                         (int(10 * (self.ommatidies_dir[iom2, 1] + 180)),
-                                          int(10 * (-self.ommatidies_dir[iom2, 0] + 90))),
-                                         int(10 * self.ommatidies_acc[iom2, 0]),
-                                         color=(-LI_net[iom1, iom2]*255, 0, 0),
-                                         thickness=-1)
+                    # LI_visu = cv2.circle(LI_visu,
+                    #                      (int(10 * (self.ommatidies_dir[iom2, 1] + 180)),
+                    #                       int(10 * (-self.ommatidies_dir[iom2, 0] + 90))),
+                    #                      int(10 * self.ommatidies_acc[iom2, 0]),
+                    #                      color=(-LI_net[iom1, iom2]*255, 0, 0),
+                    #                      thickness=-1)
 
             # cv2.imshow('LI show', cv2.resize(LI_visu, (1440, 720)))
             # cv2.waitKey()
@@ -659,7 +671,7 @@ class Agent_sim(pyglet.window.Window):
                  *args, **kwargs):
         super(Agent_sim, self).__init__(width, height, *args, **kwargs)
 
-        print('-> Initialisation')
+        print('** Model circuits initialisation **')
 
         self.BrainType = BrainType
 
@@ -702,7 +714,7 @@ class Agent_sim(pyglet.window.Window):
         self.winLI = 'vPNs activity'
         self.winOF = 'OF calculation'
 
-        self.lightfv = ctypes.c_float * 4
+        # self.lightfv = ctypes.c_float * 4
 
         self.dark = False
 
@@ -810,6 +822,7 @@ class Agent_sim(pyglet.window.Window):
         pixratio_H = abs(Top_cam - Bottom_cam) / height
         pixratio_W = abs(Right_cam - Left_cam) / width
 
+        print('\t-> Ommatidia angular mapping')
         ipix = 0
         for ih in range(height):
             for icam in range(self.nb_segments):
@@ -822,29 +835,28 @@ class Agent_sim(pyglet.window.Window):
 
                     ipix += 1
 
-        PixMap_X_img = PixMap_angular[:, 1].reshape((Height, Width))
-        PixMap_Y_img = PixMap_angular[:, 0].reshape((Height, Width))
+        # PixMap_X_img = PixMap_angular[:, 1].reshape((Height, Width))
+        # PixMap_Y_img = PixMap_angular[:, 0].reshape((Height, Width))
 
         # self.Monocular_eye = Eye_obj([0, 0], [160.0, 70.0], [40, 20], dist_met='gaussian', fovea_loc=[0, 0])
         self.Monocular_eye = Eye_obj([0, 0], [170.0, 80.0], [40, 20], dist_met='dispersion', fovea_loc=[0, 0])
 
-        imEyeMercator = np.zeros((1800, 3600, 3), np.uint8)
-        for iom in range(len(self.Monocular_eye.ommatidies_ID)):
-            imEyeMercator = cv2.circle(imEyeMercator,
-                                        (int(10 * (self.Monocular_eye.ommatidies_dir[iom, 1] + 180)),
-                                         int(10 * (-self.Monocular_eye.ommatidies_dir[iom, 0] + 90))),
-                                        int(10 * self.Monocular_eye.ommatidies_acc[iom, 0]),
-                                        color=(255, 255, 255),
-                                        thickness=2)
-
-        imEyeMercator = cv2.resize(imEyeMercator,
-                                   (Width, Height),
-                                   interpolation=cv2.INTER_AREA)
+        # imEyeMercator = np.zeros((1800, 3600, 3), np.uint8)
+        # for iom in range(len(self.Monocular_eye.ommatidies_ID)):
+        #     imEyeMercator = cv2.circle(imEyeMercator,
+        #                                 (int(10 * (self.Monocular_eye.ommatidies_dir[iom, 1] + 180)),
+        #                                  int(10 * (-self.Monocular_eye.ommatidies_dir[iom, 0] + 90))),
+        #                                 int(10 * self.Monocular_eye.ommatidies_acc[iom, 0]),
+        #                                 color=(255, 255, 255),
+        #                                 thickness=2)
+        #
+        # imEyeMercator = cv2.resize(imEyeMercator,
+        #                            (Width, Height),
+        #                            interpolation=cv2.INTER_AREA)
         # cv2.imshow('Eye model', imEyeMercator)
         # cv2.waitKey(0)
 
         name_savedfile = self.name_saved + 'Ommat_receptfields.csv'
-        # print(MB_mat.shape)
         EyeModel_save = np.concatenate((self.Monocular_eye.ommatidies_dir, self.Monocular_eye.ommatidies_acc), axis=1)
         np.savetxt(name_savedfile, EyeModel_save, delimiter=",")
 
@@ -857,8 +869,6 @@ class Agent_sim(pyglet.window.Window):
         for iommat in range(len(self.Monocular_eye.ommatidies_ID)):
             PixDist_ellipse = ((wrapTo180(PixMap_angular[:, 0] - self.Monocular_eye.ommatidies_dir[iommat, 0]) / self.Monocular_eye.ommatidies_acc[iommat, 0])**2
                                + (wrapTo180(PixMap_angular[:, 1] - self.Monocular_eye.ommatidies_dir[iommat, 1]) / self.Monocular_eye.ommatidies_acc[iommat, 1])**2)
-
-            # print(PixDist_ellipse)
 
             PixDist_ellipse_matrix = PixDist_ellipse.reshape((Height, Width))
 
@@ -875,21 +885,6 @@ class Agent_sim(pyglet.window.Window):
             else:
                 self.VisRew_att_rf[iommat] = 0.0
 
-
-        fig, axs = mp.subplots(2, 1)
-        # print(len(self.Monocular_eye.ommatidies_ID))
-        axs[0].imshow(PixDist_ellipse_img, cmap=mp.cm.cividis)
-
-        fig.set_size_inches(12, 12)
-        mp.tight_layout()
-        # mp.show()
-        # if not os.path.exists(self.name_saved[0:-6] + 'EyeModel_PixelMap.pdf'):
-        #     fig.savefig(self.name_saved[0:-6] + 'EyeModel_PixelMap.pdf', dpi=600)
-
-        # mp.show()
-        mp.close(fig)
-
-        # print(self.Height, self.Width)
         self.Ommat_pixelRes = (40, 40)
         self.Eye_rf, self.ID_ommatidies = eye_generate2(self.Ommat_pixelRes, (self.Height, self.Width))
 
@@ -905,9 +900,11 @@ class Agent_sim(pyglet.window.Window):
 
         self.Eye_rf_center = self.ID_ommatidies
         ## Lateral Inhibition (Eye v2.1 | dispersion)
+        print('\t-> Lateral inhibition circuit')
+
         self.LatInhib = np.zeros((len(self.Monocular_eye.ommatidies_ID), len(self.Monocular_eye.ommatidies_ID)))
         for iom1 in range(len(self.Monocular_eye.ommatidies_ID)):
-            LI_visu = np.zeros((1800, 3600, 3), np.uint8)
+            # LI_visu = np.zeros((1800, 3600, 3), np.uint8)
             dist = np.sqrt((self.Monocular_eye.ommatidies_dir[:, 0] - self.Monocular_eye.ommatidies_dir[iom1, 0])**2
                            + (self.Monocular_eye.ommatidies_dir[:, 1] - self.Monocular_eye.ommatidies_dir[iom1, 1])**2)
             minimal_dists = np.argsort(dist)
@@ -916,32 +913,15 @@ class Agent_sim(pyglet.window.Window):
                 InhibRange = sum(dist < 15)
             RatioInhib = np.mean(dist[minimal_dists[1:InhibRange]])
             NormFactor = np.sum(np.exp(-0.5 * (dist[minimal_dists[1:InhibRange]] / RatioInhib)**2))
-            # print('\n££££££')
             for imins in range(InhibRange+1):
                 iom2 = minimal_dists[imins]
                 # print(iom2, self.Monocular_eye.ommatidies_dir[iom2, 1], self.Monocular_eye.ommatidies_dir[iom2, 0])
                 if imins == 0:
                     self.LatInhib[iom1, iom2] = NormFactor * 0.9
-
-                    LI_visu = cv2.circle(LI_visu,
-                                         (int(10 * (self.Monocular_eye.ommatidies_dir[iom2, 1] + 180)),
-                                          int(10 * (-self.Monocular_eye.ommatidies_dir[iom2, 0] + 90))),
-                                         int(8 * self.Monocular_eye.ommatidies_acc[iom2, 0]),
-                                         color=(0, 255, 0),
-                                         thickness=-1)
                 else:
                     self.LatInhib[iom1, iom2] = -np.exp(-0.5 * (dist[minimal_dists[imins]]/RatioInhib)**2)
 
-                    LI_visu = cv2.circle(LI_visu,
-                                         (int(10 * (self.Monocular_eye.ommatidies_dir[iom2, 1] + 180)),
-                                          int(10 * (-self.Monocular_eye.ommatidies_dir[iom2, 0] + 90))),
-                                         int(10 * self.Monocular_eye.ommatidies_acc[iom2, 0]),
-                                         color=(-self.LatInhib[iom1, iom2]*255, 0, 0),
-                                         thickness=-1)
-
-            LI_visu = cv2.resize(LI_visu, (Width, Height))
-
-        print('-> Visiual pipeline generated')
+        print('\t==> Visiual pipeline generated')
 
         ## CX nets
         ## (eye v2.0)
@@ -964,8 +944,8 @@ class Agent_sim(pyglet.window.Window):
         
         ##########################
         ## CX connectomic matrixes
-        fig, axs = mp.subplots(3, 3)
-        igraph = 0
+        # fig, axs = mp.subplots(3, 3)
+        # igraph = 0
 
         ## Ellipsoid Body compass
         self.CX_Visin = np.zeros(16)
@@ -976,6 +956,8 @@ class Agent_sim(pyglet.window.Window):
         self.CX_PB_Delta7 = np.zeros(16)
         self.CX_NO = np.zeros(2)
         self.CX_NOt = np.zeros(1)
+
+        print('\t-> EB - PB connectivity')
 
         self.CX_EPG2PEG = np.zeros((len(self.CX_EB_EPG), len(self.CX_PB_PEG)))
         for ineuron1 in range(self.CX_EPG2PEG.shape[0]):
@@ -990,15 +972,6 @@ class Agent_sim(pyglet.window.Window):
                 neuron_distance = np.remainder(ineuron1-ineuron2, 16)
                 if neuron_distance == 0:
                     self.CX_PEG2EPG[ineuron1, ineuron2] = 1.0
-
-        Xaxis = int(np.floor(igraph / 3))
-        Yaxis = int(igraph % 3)
-        # print(Xaxis, Yaxis)
-        axs[Xaxis, Yaxis].imshow(self.CX_PEG2EPG, cmap=mp.cm.cividis, vmin=-1.0, vmax=1.0)
-        axs[Xaxis, Yaxis].set_ylabel('EPG / EPG / PEG')
-        axs[Xaxis, Yaxis].set_xlabel('PEG / PEN / EPG')
-        axs[Xaxis, Yaxis].set_title('EPG-to-PEG / EPG-to-PEN / PEG-to-EPG')
-        igraph += 1
 
         self.CX_EPG2PEN = np.zeros((len(self.CX_EB_EPG), len(self.CX_PB_PEN)))
         for ineuron1 in range(self.CX_EPG2PEN.shape[0]):
@@ -1020,16 +993,6 @@ class Agent_sim(pyglet.window.Window):
             for ineuron2 in range(self.CX_PEN2EPG.shape[1]):
                 if idx_input[ineuron1] == idx_output[ineuron2]:
                     self.CX_PEN2EPG[ineuron1, ineuron2] = 1.0
-
-
-        Xaxis = int(np.floor(igraph / 3))
-        Yaxis = int(igraph % 3)
-        # print(Xaxis, Yaxis)
-        axs[Xaxis, Yaxis].imshow(self.CX_PEN2EPG, cmap=mp.cm.cividis, vmin=-1.0, vmax=1.0)
-        axs[Xaxis, Yaxis].set_ylabel('PEN')
-        axs[Xaxis, Yaxis].set_xlabel('EPG')
-        axs[Xaxis, Yaxis].set_title('PEN-to-EPG')
-        igraph += 1
 
         self.CX_EPG2D7 = np.zeros((len(self.CX_EB_EPG), len(self.CX_PB_Delta7)))
         idx_input = np.arange(len(self.CX_EB_EPG))
@@ -1060,15 +1023,6 @@ class Agent_sim(pyglet.window.Window):
                     self.CX_EPG2D7[ineuron1, ineuron2] = sum(modulator1*modulator2)
                 elif (ineuron1 >= 8) & (ineuron2 >= 8):
                     self.CX_EPG2D7[ineuron1, ineuron2] = sum(modulator1*modulator2)
-
-        Xaxis = int(np.floor(igraph / 3))
-        Yaxis = int(igraph % 3)
-        # print(Xaxis, Yaxis)
-        axs[Xaxis, Yaxis].imshow(self.CX_EPG2D7, cmap=mp.cm.cividis, vmin=-1.0, vmax=1.0)
-        axs[Xaxis, Yaxis].set_xlabel('\u03947')
-        axs[Xaxis, Yaxis].set_ylabel('EPG')
-        axs[Xaxis, Yaxis].set_title('EPG-to-\u03947')
-        igraph += 1
 
         self.CX_D72D7 = np.zeros((len(self.CX_PB_Delta7), len(self.CX_PB_Delta7)))
         idx_input_half = np.arange(int(len(self.CX_PB_Delta7)/2))
@@ -1105,15 +1059,6 @@ class Agent_sim(pyglet.window.Window):
                     self.CX_D72D7[ineuron1, ineuron2] = -sum(modulator1 * modulator2)
                 elif (ineuron1 >= 8) & (ineuron2 >= 8):
                     self.CX_D72D7[ineuron1, ineuron2] = -sum(modulator1 * modulator2)
-
-        Xaxis = int(np.floor(igraph / 3))
-        Yaxis = int(igraph % 3)
-        # print(Xaxis, Yaxis)
-        axs[Xaxis, Yaxis].imshow(self.CX_D72D7, cmap=mp.cm.cividis, vmin=-1.0, vmax=1.0)
-        axs[Xaxis, Yaxis].set_xlabel('\u03947')
-        axs[Xaxis, Yaxis].set_ylabel('\u03947')
-        axs[Xaxis, Yaxis].set_title('\u03947-to-\u03947')
-        igraph += 1
 
         self.CX_D72PEG = np.zeros((len(self.CX_PB_Delta7), len(self.CX_PB_PEG)))
         idx_input_half = np.arange(int(len(self.CX_PB_Delta7)/2))
@@ -1187,16 +1132,6 @@ class Agent_sim(pyglet.window.Window):
                 elif (ineuron1 >= 8) & (ineuron2 >= 8):
                     self.CX_D72PEN[ineuron1, ineuron2] = -sum(modulator1 * modulator2)
 
-
-        Xaxis = int(np.floor(igraph / 3))
-        Yaxis = int(igraph % 3)
-        # print(Xaxis, Yaxis)
-        axs[Xaxis, Yaxis].imshow(self.CX_D72PEG, cmap=mp.cm.cividis, vmin=-1.0, vmax=1.0)
-        axs[Xaxis, Yaxis].set_xlabel('PEG / PEN / PFN / PFL')
-        axs[Xaxis, Yaxis].set_ylabel('\u03947')
-        axs[Xaxis, Yaxis].set_title('\u03947-to-PEG/PEN/PFN/PFL')
-        igraph += 1
-
         self.CX_NO2PEN = np.zeros((len(self.CX_NO), len(self.CX_PB_PEN)))
         for ineuron1 in range(len(self.CX_NO)):
             for ineuron2 in range(len(self.CX_PB_PEN)):
@@ -1205,7 +1140,7 @@ class Agent_sim(pyglet.window.Window):
                 elif (ineuron1 == 1) & (ineuron2 >= 8):
                     self.CX_NO2PEN[ineuron1, ineuron2] = 1.0
 
-        ## Vector Steering system
+        print('\t-> PB - FB connectivity')
         self.CX_PB_PFNc = np.zeros(16)
         self.CX_PB_PFL3 = np.zeros(16)
         self.CX_LAL = np.zeros(2)
@@ -1323,20 +1258,6 @@ class Agent_sim(pyglet.window.Window):
                 elif (ineuron1 >= 8) & (ineuron2 >= 8):
                     self.CX_PFN2PFL[ineuron1, ineuron2] = sum(modulator1 * modulator2)
 
-        Xaxis = int(np.floor(igraph / 3))
-        Yaxis = int(igraph % 3)
-        # print(Xaxis, Yaxis)
-        axs[Xaxis, Yaxis].imshow(self.CX_PFN2PFL, cmap=mp.cm.cividis, vmin=-1.0, vmax=1.0)
-        axs[Xaxis, Yaxis].set_xlabel('PFL / h\u0394')
-        axs[Xaxis, Yaxis].set_ylabel('PFN')
-        axs[Xaxis, Yaxis].set_title('PFN-to-PFL/h\u0394')
-        igraph += 1
-
-        self.CX_PFN2PFL_loc = self.CX_PFN2PFL.copy()
-        self.CX_PFN2PFL_int = self.CX_PFN2PFL.copy()
-        self.CX_PFN2PFL_glo = self.CX_PFN2PFL.copy()
-        self.CX_PFN2PFL_init = self.CX_PFN2PFL.copy()
-
         self.CX_PFL2LAL = np.zeros((len(self.CX_PB_PFL3), len(self.CX_LAL)))
         for ineuron1 in range(self.CX_PFL2LAL.shape[0]):
             for ineuron2 in range(self.CX_PFL2LAL.shape[1]):
@@ -1345,7 +1266,7 @@ class Agent_sim(pyglet.window.Window):
                 if (ineuron2 == 1) & (ineuron1 >= 8):
                     self.CX_PFL2LAL[ineuron1, ineuron2] = 1.0
 
-        ## Vector storing system
+        print('\t-> intra-FB connectivity')
         self.CX_FB_hDc = np.ones(16) * 0.5
         self.CX_PFN2hDc = np.zeros((len(self.CX_PB_PFNc), len(self.CX_FB_hDc)))
         idx_input_half = np.arange(int(len(self.CX_PB_PFNc) / 2))
@@ -1412,31 +1333,9 @@ class Agent_sim(pyglet.window.Window):
                 modulator2[modulator2 < 0] = 0
                 self.CX_hDc2PFL[ineuron1, ineuron2] = sum(modulator1 * modulator2)
 
-        Xaxis = int(np.floor(igraph / 3))
-        Yaxis = int(igraph % 3)
-        # print(Xaxis, Yaxis)
-        axs[Xaxis, Yaxis].imshow(self.CX_hDc2PFL, cmap=mp.cm.cividis, vmin=-1.0, vmax=1.0)
-        axs[Xaxis, Yaxis].set_xlabel('PFL')
-        axs[Xaxis, Yaxis].set_ylabel('h\u0394')
-        axs[Xaxis, Yaxis].set_title('h\u0394-to-PFL')
-        igraph += 1
-
-        while igraph <= 8:
-            Xaxis = int(np.floor(igraph/3))
-            Yaxis = int(igraph % 3)
-            axs[Xaxis, Yaxis].set_axis_off()
-            igraph += 1
-
-        fig.set_size_inches(12, 12)
-        mp.tight_layout()
-        # mp.show()
-        # if not os.path.exists(self.name_saved[0:-6] + 'NeuroNets_matrix.pdf'):
-        #     fig.savefig(self.name_saved[0:-6] + 'NeuroNets_matrix.pdf', dpi=600)
-
-        mp.close(fig)
-
         self.Max_DeltaCX = 20
 
+        print('\t-> FBt memory circuit')
         ## Memory circuit
         self.CX_FB_FBt = np.zeros(3)
         self.CX_FB_FBt_pfn = np.zeros(3)
@@ -1482,7 +1381,7 @@ class Agent_sim(pyglet.window.Window):
         self.learning = False
         self.antilearning = False
 
-        print('-> CX connectivity generated')
+        print('\t==> CX connectivity generated')
 
         ## MB nets
         self.ref_thresh = MB_thresh
@@ -1539,7 +1438,7 @@ class Agent_sim(pyglet.window.Window):
 
         self.MBmemo = np.zeros(self.Monocular_eye.ommatidies_ID.shape[0])
 
-        print('-> MB connectivity generated')
+        print('\t==> MB connectivity generated')
 
         self.familiarity = 0.0
         self.proprioception = 0.0
@@ -1637,15 +1536,15 @@ class Agent_sim(pyglet.window.Window):
 
         self.Sight = False
 
-        print('-> Model initiated')
+        print('==> Model initiated')
 
     def on_draw(self):
         self.clear()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        glLightfv(GL_LIGHT0, GL_POSITION, self.lightfv(0.0, 0.0, 0.0, 0.0))
-        glEnable(GL_COLOR_MATERIAL)
+        # glLightfv(GL_LIGHT0, GL_POSITION, self.lightfv(0.0, 0.0, 0.0, 0.0))
+        # glEnable(GL_COLOR_MATERIAL)
         glEnable(GL_DEPTH_TEST)
-        glShadeModel(GL_SMOOTH)
+        # glShadeModel(GL_SMOOTH)
 
         nb_segments = self.nb_segments
 
@@ -1987,8 +1886,10 @@ class Agent_sim(pyglet.window.Window):
     def update(self, dt):
     #################
     #### Image buffer
-        Posx, Posy, width, height = glGetIntegerv(GL_VIEWPORT)
-        buff = glReadPixels(0, 0, self.Width, self.Height, GL_RGB, GL_UNSIGNED_BYTE)
+        viewport = (GLint * 4)()
+        glGetIntegerv(GL_VIEWPORT, viewport)
+        buff = (GLubyte * (self.Width * self.Height * 3))(0)
+        glReadPixels(0, 0, self.Width, self.Height, GL_RGB, GL_UNSIGNED_BYTE, buff)
         image_array = np.frombuffer(buff, np.uint8)
         image = image_array.reshape(self.Height, self.Width, 3)
 
@@ -2015,9 +1916,11 @@ class Agent_sim(pyglet.window.Window):
             self.CX_update(Updating=False)
             self.it += 1
             self.it_Route = 0
+            if self.it == 1:
+                print('** Behaviour **')
 
         elif self.it == 50:
-            print('Simulation started')
+            print('\t--> Start walking')
             self.it += 1
             self.snapcount = 0
         else:
@@ -2025,87 +1928,87 @@ class Agent_sim(pyglet.window.Window):
 
         ############################
         #### Vision pipeline display
-            if self.Display:
-                imSimu = np.flipud(cv2.resize(cv2.cvtColor(image_bluechannel, cv2.COLOR_RGB2BGR),
-                                              (int(Width/2), int(Height/2)),
-                                              interpolation=cv2.INTER_AREA))
-
-                imGreenChannel = np.zeros((1800, 3600, 3), np.uint8)
-                for iom in range(len(self.Monocular_eye.ommatidies_ID)):
-                    color_val = int(self.vision_att[iom] * 255)
-
-                    if (abs(self.Monocular_eye.ommatidies_dir[iom, 1]) < 10) & (self.Monocular_eye.ommatidies_dir[iom, 0] > 0):
-                        imGreenChannel = cv2.circle(imGreenChannel,
-                                                    (int(10 * (self.Monocular_eye.ommatidies_dir[iom, 1]+180)),
-                                                     int(10 * (-self.Monocular_eye.ommatidies_dir[iom, 0]+90))),
-                                                    int(9 * self.Monocular_eye.ommatidies_acc[iom, 0]),
-                                                    color=(0, color_val, 0),
-                                                    thickness=-1)
-                        imGreenChannel = cv2.circle(imGreenChannel,
-                                                    (int(10 * (self.Monocular_eye.ommatidies_dir[iom, 1] + 180)),
-                                                     int(10 * (-self.Monocular_eye.ommatidies_dir[iom, 0] + 90))),
-                                                    int(10 * self.Monocular_eye.ommatidies_acc[iom, 0]),
-                                                    color=(255, 255, 255),
-                                                    thickness=2)
-
-                imGreenChannel = cv2.resize(imGreenChannel,
-                                            (int(Width/2), int(Height/2)),
-                                            interpolation=cv2.INTER_AREA)
-
-                imPN_visionbrut = np.zeros((1800, 3600, 3), np.uint8)
-
-                for iom in range(len(self.Monocular_eye.ommatidies_ID)):
-                    color_val = (self.vision_brut[iom] * 255)
-                    if color_val > 255:
-                        color_val = 255
-
-                    imPN_visionbrut = cv2.circle(imPN_visionbrut,
-                                                 (int(10 * (self.Monocular_eye.ommatidies_dir[iom, 1]+180)),
-                                                  int(10 * (-self.Monocular_eye.ommatidies_dir[iom, 0]+90))),
-                                                 int(10 * self.Monocular_eye.ommatidies_acc[iom, 0]),
-                                                 color=(color_val, color_val, color_val),
-                                                 thickness=-1)
-                    imPN_visionbrut = cv2.circle(imPN_visionbrut,
-                                                 (int(10 * (self.Monocular_eye.ommatidies_dir[iom, 1]+180)),
-                                                  int(10 * (-self.Monocular_eye.ommatidies_dir[iom, 0]+90))),
-                                                 int(10 * self.Monocular_eye.ommatidies_acc[iom, 0]),
-                                                 color=(255, 255, 255),
-                                                 thickness=2)
-
-                imPN_visionbrut = cv2.resize(imPN_visionbrut,
-                                             (int(Width/2), int(Height/2)),
-                                             interpolation=cv2.INTER_AREA)
-
-                imPN_vision = np.zeros((1800, 3600, 3), np.uint8)
-
-                for iom in range(len(self.Monocular_eye.ommatidies_ID)):
-                    color_val = int(self.vision[0, iom] * 255)
-                    if color_val > 255:
-                        color_val = 255
-
-                    imPN_vision = cv2.circle(imPN_vision,
-                                             (int(10 * (self.Monocular_eye.ommatidies_dir[iom, 1]+180)),
-                                              int(10 * (-self.Monocular_eye.ommatidies_dir[iom, 0]+90))),
-                                             int(10 * self.Monocular_eye.ommatidies_acc[iom, 0]),
-                                             color=(color_val, color_val, color_val),
-                                             thickness=-1)
-                    imPN_vision = cv2.circle(imPN_vision,
-                                             (int(10 * (self.Monocular_eye.ommatidies_dir[iom, 1]+180)),
-                                              int(10 * (-self.Monocular_eye.ommatidies_dir[iom, 0]+90))),
-                                             int(10 * self.Monocular_eye.ommatidies_acc[iom, 0]),
-                                             color=(255, 255, 255),
-                                             thickness=2)
-
-                imPN_vision = cv2.resize(imPN_vision,
-                                         (int(Width/2), int(Height/2)),
-                                         interpolation=cv2.INTER_AREA)
-
-                UpperLine = cv2.hconcat([imSimu, imPN_visionbrut])
-                BottomLine = cv2.hconcat([imPN_vision, imGreenChannel])
-                Quadrant4Img = cv2.vconcat([UpperLine, BottomLine])
-
-                cv2.imshow('Visual Process pipeline', Quadrant4Img)
-                cv2.waitKey(1)
+            # if self.Display:
+            #     imSimu = np.flipud(cv2.resize(cv2.cvtColor(image_bluechannel, cv2.COLOR_RGB2BGR),
+            #                                   (int(Width/2), int(Height/2)),
+            #                                   interpolation=cv2.INTER_AREA))
+            #
+            #     imGreenChannel = np.zeros((1800, 3600, 3), np.uint8)
+            #     for iom in range(len(self.Monocular_eye.ommatidies_ID)):
+            #         color_val = int(self.vision_att[iom] * 255)
+            #
+            #         if (abs(self.Monocular_eye.ommatidies_dir[iom, 1]) < 10) & (self.Monocular_eye.ommatidies_dir[iom, 0] > 0):
+            #             imGreenChannel = cv2.circle(imGreenChannel,
+            #                                         (int(10 * (self.Monocular_eye.ommatidies_dir[iom, 1]+180)),
+            #                                          int(10 * (-self.Monocular_eye.ommatidies_dir[iom, 0]+90))),
+            #                                         int(9 * self.Monocular_eye.ommatidies_acc[iom, 0]),
+            #                                         color=(0, color_val, 0),
+            #                                         thickness=-1)
+            #             imGreenChannel = cv2.circle(imGreenChannel,
+            #                                         (int(10 * (self.Monocular_eye.ommatidies_dir[iom, 1] + 180)),
+            #                                          int(10 * (-self.Monocular_eye.ommatidies_dir[iom, 0] + 90))),
+            #                                         int(10 * self.Monocular_eye.ommatidies_acc[iom, 0]),
+            #                                         color=(255, 255, 255),
+            #                                         thickness=2)
+            #
+            #     imGreenChannel = cv2.resize(imGreenChannel,
+            #                                 (int(Width/2), int(Height/2)),
+            #                                 interpolation=cv2.INTER_AREA)
+            #
+            #     imPN_visionbrut = np.zeros((1800, 3600, 3), np.uint8)
+            #
+            #     for iom in range(len(self.Monocular_eye.ommatidies_ID)):
+            #         color_val = (self.vision_brut[iom] * 255)
+            #         if color_val > 255:
+            #             color_val = 255
+            #
+            #         imPN_visionbrut = cv2.circle(imPN_visionbrut,
+            #                                      (int(10 * (self.Monocular_eye.ommatidies_dir[iom, 1]+180)),
+            #                                       int(10 * (-self.Monocular_eye.ommatidies_dir[iom, 0]+90))),
+            #                                      int(10 * self.Monocular_eye.ommatidies_acc[iom, 0]),
+            #                                      color=(color_val, color_val, color_val),
+            #                                      thickness=-1)
+            #         imPN_visionbrut = cv2.circle(imPN_visionbrut,
+            #                                      (int(10 * (self.Monocular_eye.ommatidies_dir[iom, 1]+180)),
+            #                                       int(10 * (-self.Monocular_eye.ommatidies_dir[iom, 0]+90))),
+            #                                      int(10 * self.Monocular_eye.ommatidies_acc[iom, 0]),
+            #                                      color=(255, 255, 255),
+            #                                      thickness=2)
+            #
+            #     imPN_visionbrut = cv2.resize(imPN_visionbrut,
+            #                                  (int(Width/2), int(Height/2)),
+            #                                  interpolation=cv2.INTER_AREA)
+            #
+            #     imPN_vision = np.zeros((1800, 3600, 3), np.uint8)
+            #
+            #     for iom in range(len(self.Monocular_eye.ommatidies_ID)):
+            #         color_val = int(self.vision[0, iom] * 255)
+            #         if color_val > 255:
+            #             color_val = 255
+            #
+            #         imPN_vision = cv2.circle(imPN_vision,
+            #                                  (int(10 * (self.Monocular_eye.ommatidies_dir[iom, 1]+180)),
+            #                                   int(10 * (-self.Monocular_eye.ommatidies_dir[iom, 0]+90))),
+            #                                  int(10 * self.Monocular_eye.ommatidies_acc[iom, 0]),
+            #                                  color=(color_val, color_val, color_val),
+            #                                  thickness=-1)
+            #         imPN_vision = cv2.circle(imPN_vision,
+            #                                  (int(10 * (self.Monocular_eye.ommatidies_dir[iom, 1]+180)),
+            #                                   int(10 * (-self.Monocular_eye.ommatidies_dir[iom, 0]+90))),
+            #                                  int(10 * self.Monocular_eye.ommatidies_acc[iom, 0]),
+            #                                  color=(255, 255, 255),
+            #                                  thickness=2)
+            #
+            #     imPN_vision = cv2.resize(imPN_vision,
+            #                              (int(Width/2), int(Height/2)),
+            #                              interpolation=cv2.INTER_AREA)
+            #
+            #     UpperLine = cv2.hconcat([imSimu, imPN_visionbrut])
+            #     BottomLine = cv2.hconcat([imPN_vision, imGreenChannel])
+            #     Quadrant4Img = cv2.vconcat([UpperLine, BottomLine])
+            #
+            #     cv2.imshow('Visual Process pipeline', Quadrant4Img)
+            #     cv2.waitKey(1)
 
             ##############
             #### Behaviour
@@ -2326,7 +2229,7 @@ class Agent_sim(pyglet.window.Window):
                     if (self.Exploration == 1) & (dist2target < self.Target_size[0]) & (not self.Blink) & self.Back:
                         self.Food = 1
                         self.DAN_FBt_hdc[2] = 1
-                        print('Target found')
+                        print('\t==> Target reached after', str(self.it), 'steps')
                         self.it = 0
                         self.CX_FBt2PFN[0, :] = -np.ones_like(self.CX_FBt2PFN[0, :]) * 0.5
                     else:
@@ -2336,8 +2239,7 @@ class Agent_sim(pyglet.window.Window):
                         self.Food = 1
                         # self.FindFood = True
                         self.DAN_FBt_hdc[0] = 1
-                        print('---> Limit reached')
-                        print('Target at coordinates: X =', str(self.translation_x), '| Y =', str(self.translation_y))
+                        print('\t==> Food source reached at coordinates:', str(self.translation_x), '| ', str(self.translation_y))
                         self.Target_location = [self.translation_x , self.translation_y]
                         self.Target_on = True
                         self.it = 0
@@ -2348,9 +2250,8 @@ class Agent_sim(pyglet.window.Window):
                         self.Food = 1
                         self.DAN_FBt_hdc[self.SourceExplored] = 1
                         self.SourceExplored += 1
-                        print('---> Limit reached')
-                        print('Target', self.SourceExplored, 'at coordinates: X =', str(self.translation_x),
-                              '| Y =', str(self.translation_y))
+                        print('\t==> Food source #', self.SourceExplored, 'reach at coordinates:', str(self.translation_x),
+                              '| ', str(self.translation_y))
                         self.Target_location = [self.translation_x, self.translation_y]
                         self.Target_on = True
                         self.it = 0
@@ -2359,7 +2260,7 @@ class Agent_sim(pyglet.window.Window):
                         self.DAN_FBt_hdc[1] = 0
 
                 if ((self.Exploration == 0) & (self.VecMemo == 0)) & (np.sqrt(self.translation_x ** 2 + self.translation_y ** 2) < 20):
-                    print('---> Back home')
+                    print('\t==> Home reached after', str(self.it), 'steps')
                     self.Food = 0
                     if self.Scenario == 'VD':
                         self.VecMemo = 1
@@ -2385,13 +2286,11 @@ class Agent_sim(pyglet.window.Window):
                         self.rotation_z = self.DirTravel
                         self.Turn = 0
                         self.TurnWay = np.sign(np.random.uniform(-1, 1, 1)[0])
-                        # print(self.DirTravel)
                     elif (np.sqrt(self.translation_x ** 2 + self.translation_y ** 2) > 80) & (self.Turn == 0):
                         self.DirTravel += self.TurnWay * np.random.uniform(100.0, 120.0, 1)[0]
                         self.rotation_z = self.DirTravel
                         self.Turn = 1
                         self.TurnWay *= -1
-                        # print(self.DirTravel)
                     elif (np.sqrt(self.translation_x ** 2 + self.translation_y ** 2) > 160) & (self.Turn == 1):
                         self.DirTravel += self.TurnWay * np.random.uniform(60.0, 90.0, 1)[0]
                         self.rotation_z = self.DirTravel
@@ -2434,7 +2333,7 @@ class Agent_sim(pyglet.window.Window):
                     self.Exploration = 0
                     self.VecMemo = 0
                     self.Return = 1
-                    print('---> Return engaged')
+                    print('\t==> Homing engaged')
         ###############################
         #### Neurons activity recording
             if self.Display_neurons:
@@ -2502,12 +2401,6 @@ class Agent_sim(pyglet.window.Window):
                 mp.draw()
                 mp.pause(0.001)
 
-            # print('')
-            # comp_PFN_hDc = [self.CX_PB_PFNc.tolist(),
-            #                 self.CX_FB_hDc.tolist()]
-            # print(tabulate(comp_PFN_hDc, headers=range(len(self.CX_PB_PFNc.tolist()))))
-            # print('#############################')
-
             self.NO_activity.append(self.CX_NO.tolist())
             self.Polar_activity.append(self.CX_Polin.tolist())
             self.EPG_activity.append(self.CX_EB_EPG.tolist())
@@ -2537,8 +2430,6 @@ class Agent_sim(pyglet.window.Window):
 
         #################
         #### Time counter
-            # print('\r', self.it, end='')
-
             if self.Scenario == 'MB':
                 if self.it > 100000:
                     self.stop()
@@ -2620,7 +2511,7 @@ class Agent_sim(pyglet.window.Window):
         a = np.asarray(self.FBt_hDc_memory, dtype=np.float32)
         np.savetxt(name_savedfile, a, delimiter=",")
 
-        cv2.destroyAllWindows()
+        # cv2.destroyAllWindows()
         self.close()
 
 
@@ -2923,10 +2814,10 @@ if __name__ == "__main__":
         else:
             search = 'OFF'
 
-    ScriptName = __file__[target+1:]
-    src = ScriptName
-    dst = name_folder + 'SimuCode.py'
-    shutil.copyfile(src, dst)
+    # ScriptName = __file__[target+1:]
+    # src = ScriptName
+    # dst = name_folder + 'SimuCode.py'
+    # shutil.copyfile(src, dst)
     filetxt_params = open(name_folder + "Obj_parameters_exp.txt", "a")
     filetxt_params.write('Exp' + '\t'
                          + 'Object' + '\t'
