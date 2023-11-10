@@ -659,6 +659,8 @@ class Agent_sim(pyglet.window.Window):
                  *args, **kwargs):
         super(Agent_sim, self).__init__(width, height, *args, **kwargs)
 
+        print('-> Initialisation')
+
         self.BrainType = BrainType
 
         self.Gain_global = Gain_global
@@ -823,11 +825,6 @@ class Agent_sim(pyglet.window.Window):
         PixMap_X_img = PixMap_angular[:, 1].reshape((Height, Width))
         PixMap_Y_img = PixMap_angular[:, 0].reshape((Height, Width))
 
-        # fig, axs = mp.subplots(2)
-        # axs[0].imshow(PixMap_Y_img, extent=[0, 1, 0, 1])
-        # axs[1].imshow(PixMap_X_img, extent=[0, 1, 0, 1])
-        # mp.show()
-
         # self.Monocular_eye = Eye_obj([0, 0], [160.0, 70.0], [40, 20], dist_met='gaussian', fovea_loc=[0, 0])
         self.Monocular_eye = Eye_obj([0, 0], [170.0, 80.0], [40, 20], dist_met='dispersion', fovea_loc=[0, 0])
 
@@ -858,15 +855,6 @@ class Agent_sim(pyglet.window.Window):
         PixDist_ellipse_img = np.zeros((Height, Width))
         # Cam2Ommat = np.zeros((len(self.Monocular_eye.ommatidies_ID), len(PixMap_angular[:, 0])))
         for iommat in range(len(self.Monocular_eye.ommatidies_ID)):
-            # limit_L = np.floor(self.Monocular_eye.ommatidies_dir[iommat, 1]
-            #                    - self.Monocular_eye.ommatidies_acc[iommat, 1])
-            # limit_R = np.ceil(self.Monocular_eye.ommatidies_dir[iommat, 1]
-            #                   + self.Monocular_eye.ommatidies_acc[iommat, 1])
-            # limit_B = np.ceil(self.Monocular_eye.ommatidies_dir[iommat, 0]
-            #                   - self.Monocular_eye.ommatidies_acc[iommat, 0])
-            # limit_T = np.floor(self.Monocular_eye.ommatidies_dir[iommat, 0]
-            #                    + self.Monocular_eye.ommatidies_acc[iommat, 0])
-
             PixDist_ellipse = ((wrapTo180(PixMap_angular[:, 0] - self.Monocular_eye.ommatidies_dir[iommat, 0]) / self.Monocular_eye.ommatidies_acc[iommat, 0])**2
                                + (wrapTo180(PixMap_angular[:, 1] - self.Monocular_eye.ommatidies_dir[iommat, 1]) / self.Monocular_eye.ommatidies_acc[iommat, 1])**2)
 
@@ -875,10 +863,6 @@ class Agent_sim(pyglet.window.Window):
             PixDist_ellipse_matrix = PixDist_ellipse.reshape((Height, Width))
 
             PixDist_ellipse_img[PixDist_ellipse_matrix <= 1] = np.random.randint(1, 255, 1)#((iommat + 10) / (self.Monocular_eye.nb_ommat_tot + 9)) * 255
-
-            # print(PixDist_ellipse_img)
-            #
-            # print(self.Monocular_eye.ommatidies_dir[iommat, 0], self.Monocular_eye.ommatidies_dir[iommat, 1])
 
             pixel_list = np.argwhere(PixDist_ellipse <= 1)
             # Cam2Ommat[iommat, pixel_list] = 1.0
@@ -899,8 +883,8 @@ class Agent_sim(pyglet.window.Window):
         fig.set_size_inches(12, 12)
         mp.tight_layout()
         # mp.show()
-        if not os.path.exists(self.name_saved[0:-6] + 'EyeModel_PixelMap.pdf'):
-            fig.savefig(self.name_saved[0:-6] + 'EyeModel_PixelMap.pdf', dpi=600)
+        # if not os.path.exists(self.name_saved[0:-6] + 'EyeModel_PixelMap.pdf'):
+        #     fig.savefig(self.name_saved[0:-6] + 'EyeModel_PixelMap.pdf', dpi=600)
 
         # mp.show()
         mp.close(fig)
@@ -920,60 +904,9 @@ class Agent_sim(pyglet.window.Window):
         self.Eye_rf_ang[:, 1] = -(self.Eye_rf_ang[:, 1]/max(self.Eye_rf[:, 1]) * 360 - 180) * ratio_HW
 
         self.Eye_rf_center = self.ID_ommatidies
-
-        ## Optic flow
-        # self.opticflow_UP = np.zeros((len(self.Eye_rf[:, 0]), len(self.Eye_rf[:, 0])))
-        # self.opticflow_DOWN = np.zeros((len(self.Eye_rf[:, 0]), len(self.Eye_rf[:, 0])))
-        # self.opticflow_LEFT_left = np.zeros((len(self.Monocular_eye.ommatidies_ID), len(self.Monocular_eye.ommatidies_ID)))
-        # self.opticflow_RIGHT_left = np.zeros((len(self.Monocular_eye.ommatidies_ID), len(self.Monocular_eye.ommatidies_ID)))
-        # self.opticflow_LEFT_right = np.zeros((len(self.Monocular_eye.ommatidies_ID), len(self.Monocular_eye.ommatidies_ID)))
-        # self.opticflow_RIGHT_right = np.zeros((len(self.Monocular_eye.ommatidies_ID), len(self.Monocular_eye.ommatidies_ID)))
-        #
-        # for iom1 in range(len(self.Monocular_eye.ommatidies_ID)):
-        #     for iom2 in range(len(self.Monocular_eye.ommatidies_ID)):
-        #         diff_hor = self.Monocular_eye.ommatidies_pos[iom2, 1] - self.Monocular_eye.ommatidies_pos[iom1, 1]
-        #         diff_ver = self.Monocular_eye.ommatidies_pos[iom2, 0] - self.Monocular_eye.ommatidies_pos[iom1, 0]
-        #
-        #         if self.Monocular_eye.ommatidies_dir[iom2, 1] > 0.0:
-        #             if (diff_hor == 1) & (diff_ver == 0):
-        #                 self.opticflow_LEFT_right[iom1, iom2] = 1.0
-        #             elif (diff_hor == -1) & (diff_ver == 0):
-        #                 self.opticflow_RIGHT_right[iom1, iom2] = 1.0
-        #
-        #         if self.Monocular_eye.ommatidies_dir[iom2, 1] < 0.0:
-        #             if (diff_hor == 1) & (diff_ver == 0):
-        #                 self.opticflow_LEFT_left[iom1, iom2] = 1.0
-        #             elif (diff_hor == -1) & (diff_ver == 0):
-        #                 self.opticflow_RIGHT_left[iom1, iom2] = 1.0
-        #
-        # # self.OFcnt_UP = np.zeros((1, len(self.Eye_rf[:, 0])))
-        # # self.OFcnt_DOWN = np.zeros((1, len(self.Eye_rf[:, 0])))
-        # self.OFcnt_LEFT_left = np.zeros((1, len(self.Monocular_eye.ommatidies_ID)))
-        # self.OFcnt_RIGHT_left = np.zeros((1, len(self.Monocular_eye.ommatidies_ID)))
-        # self.OFcnt_LEFT_right = np.zeros((1, len(self.Monocular_eye.ommatidies_ID)))
-        # self.OFcnt_RIGHT_right = np.zeros((1, len(self.Monocular_eye.ommatidies_ID)))
-
-        ## Lateral Inhibition (Eye v1.0)
-        # self.LatInhib = np.zeros((len(self.Eye_rf[:, 0]), len(self.Eye_rf[:, 0])))
-        # for iom1 in range(len(self.Eye_rf[:, 0])):
-        #     for iom2 in range(len(self.Eye_rf[:, 0])):
-        #         diff_hor = self.Eye_rf_center[iom2, 0] - self.Eye_rf_center[iom1, 0]
-        #         diff_ver = self.Eye_rf_center[iom2, 1] - self.Eye_rf_center[iom1, 1]
-        #         if (diff_hor == 0) & (diff_ver == 0):
-        #             self.LatInhib[iom1, iom2] = 6.0
-        #         elif (diff_hor == 0) & (abs(diff_ver) == 1):
-        #             self.LatInhib[iom1, iom2] = -1.0
-        #         elif (diff_ver == 0) & (abs(diff_hor) == 1):
-        #             self.LatInhib[iom1, iom2] = -1.0
-        #         elif (abs(diff_ver) == 1) & (abs(diff_hor) == 1):
-        #             self.LatInhib[iom1, iom2] = -0.5
-
         ## Lateral Inhibition (Eye v2.1 | dispersion)
         self.LatInhib = np.zeros((len(self.Monocular_eye.ommatidies_ID), len(self.Monocular_eye.ommatidies_ID)))
         for iom1 in range(len(self.Monocular_eye.ommatidies_ID)):
-            # print('\n\n%%%%%')
-            # print(iom1, self.Monocular_eye.ommatidies_dir[iom1, 1], self.Monocular_eye.ommatidies_dir[iom1, 0])
-
             LI_visu = np.zeros((1800, 3600, 3), np.uint8)
             dist = np.sqrt((self.Monocular_eye.ommatidies_dir[:, 0] - self.Monocular_eye.ommatidies_dir[iom1, 0])**2
                            + (self.Monocular_eye.ommatidies_dir[:, 1] - self.Monocular_eye.ommatidies_dir[iom1, 1])**2)
@@ -998,7 +931,6 @@ class Agent_sim(pyglet.window.Window):
                                          thickness=-1)
                 else:
                     self.LatInhib[iom1, iom2] = -np.exp(-0.5 * (dist[minimal_dists[imins]]/RatioInhib)**2)
-                    # print(dist[minimal_dists[imins]], RatioInhib, self.LatInhib[iom1, iom2])
 
                     LI_visu = cv2.circle(LI_visu,
                                          (int(10 * (self.Monocular_eye.ommatidies_dir[iom2, 1] + 180)),
@@ -1006,44 +938,10 @@ class Agent_sim(pyglet.window.Window):
                                          int(10 * self.Monocular_eye.ommatidies_acc[iom2, 0]),
                                          color=(-self.LatInhib[iom1, iom2]*255, 0, 0),
                                          thickness=-1)
-                # else:
-                #     self.LatInhib[iom1, iom2] = -np.exp(-minimal_dists[imins])/RatioInhib
-                #
-                #     LI_visu = cv2.circle(LI_visu,
-                #                          (int(10 * (self.Monocular_eye.ommatidies_dir[iom2, 1] + 180)),
-                #                           int(10 * (-self.Monocular_eye.ommatidies_dir[iom2, 0] + 90))),
-                #                          int(10 * self.Monocular_eye.ommatidies_acc[iom2, 0]),
-                #                          color=(100, 0, 0),
-                #                          thickness=-1)
 
             LI_visu = cv2.resize(LI_visu, (Width, Height))
-            # cv2.imshow(self.winOmmat, LI_visu)
-            # cv2.waitKey(0)
 
-        # LatInhib_resized = cv2.resize(self.LatInhib, (800, 800))
-        # mp.imshow(LatInhib_resized)
-        # mp.show()
-
-        ## Lateral Inhibition (Eye v2.0)
-        # self.LatInhib = np.zeros((self.Monocular_eye.nb_ommat_tot, self.Monocular_eye.nb_ommat_tot))
-        # for iom1 in range(self.Monocular_eye.nb_ommat_tot):
-        #     for iom2 in range(self.Monocular_eye.nb_ommat_tot):
-        #         diff_hor = self.Monocular_eye.ommatidies_pos[iom2, 0] - self.Monocular_eye.ommatidies_pos[iom1, 0]
-        #         diff_ver = self.Monocular_eye.ommatidies_pos[iom2, 1] - self.Monocular_eye.ommatidies_pos[iom1, 1]
-        #         if (diff_hor == 0) & (diff_ver == 0):
-        #             if ((self.Monocular_eye.ommatidies_pos[iom1, 0] != 0)
-        #                     | (self.Monocular_eye.ommatidies_pos[iom1, 0] != self.Monocular_eye.nb_ommat[0])
-        #                     | (self.Monocular_eye.ommatidies_pos[iom1, 1] != 0)
-        #                     | (self.Monocular_eye.ommatidies_pos[iom1, 1] != self.Monocular_eye.nb_ommat[1])):
-        #                 self.LatInhib[iom1, iom2] = 6.0
-        #             else:
-        #                 self.LatInhib[iom1, iom2] = 4.0
-        #         elif (diff_hor == 0) & (abs(diff_ver) == 1):
-        #             self.LatInhib[iom1, iom2] = -1.0
-        #         elif (diff_ver == 0) & (abs(diff_hor) == 1):
-        #             self.LatInhib[iom1, iom2] = -1.0
-        #         elif (abs(diff_ver) == 1) & (abs(diff_hor) == 1):
-        #             self.LatInhib[iom1, iom2] = -0.5
+        print('-> Visiual pipeline generated')
 
         ## CX nets
         ## (eye v2.0)
@@ -1057,77 +955,15 @@ class Agent_sim(pyglet.window.Window):
             self.CX_net[iom, minimum] = 1 #retinotopic
 
         self.CX_Vin2Rew = self.Monocular_eye.ommatidies_dir[:, 1].copy()
-        ## Shifted
-        self.CX_Vin2Rew += 0
         self.CX_Vin2Rew[self.CX_Vin2Rew > 180] -= 360
         self.CX_Vin2Rew[self.CX_Vin2Rew < -180] += 360
-        ## Smooth
-        # self.CX_Vin2Rew = (90 - abs(self.CX_Vin2Rew)) / 180 #Pos&Neg
-        # self.CX_Vin2Rew = (180 - abs(self.CX_Vin2Rew)) / 180 #Pos
-        # self.CX_Vin2Rew = abs(self.CX_Vin2Rew) / 180 #Neg
         ## Discrete
         limitVisRew = 15.0
         self.CX_Vin2Rew[abs(self.CX_Vin2Rew) <= limitVisRew] = 1.0
         self.CX_Vin2Rew[abs(self.CX_Vin2Rew) > limitVisRew] = 0.0 #Pos
-        # self.CX_Vin2Rew[abs(self.CX_Vin2Rew) <= limitVisRew] = 1.0
-        # self.CX_Vin2Rew[abs(self.CX_Vin2Rew) >= 180 - limitVisRew] = -1.0
-        # self.CX_Vin2Rew[(abs(self.CX_Vin2Rew) < 180 - limitVisRew) & (abs(self.CX_Vin2Rew) > limitVisRew)] = 0 #PosNeg
-
-        ## (eye v1.0)
-        # self.CX_pn = np.zeros((1, len(self.Eye_rf)))
-        # self.CX_cards = (np.arange(8)+0.5)/8 * 360 - 180
-        # self.CX_net = np.zeros((len(self.Eye_rf_ang), len(self.CX_cards)))
-        # Eye_horaim = np.tile(self.Eye_rf_ang[:, 0], (len(self.CX_cards), 1))
-        # Cards = np.transpose(np.tile(self.CX_cards, (len(self.Eye_rf_ang), 1)))
-        # shiftVin = 0.0#np.random.uniform(-180, 180, 1)
-        # dist = abs(wrapTo180(Eye_horaim + shiftVin) - Cards)
-        # minimums = np.argmin(dist, axis=0)
-        # for iom in range(len(minimums)):
-        #     self.CX_net[iom, minimums[iom]] = 1 #retinotopic
-        #
-        # self.CX_Vin2Rew = self.Eye_rf_ang.copy()[:, 0]
-        # if Scenario != 'Homing':
-        #     self.CX_Vin2Rew2 = self.Eye_rf_ang.copy()[:, 0]
-        #     # print(self.angle2Obj)
-        #     self.CX_Vin2Rew2 += self.angle2Obj
-        #     self.CX_Vin2Rew2[self.CX_Vin2Rew2 > 180] -= 360
-        #     self.CX_Vin2Rew2[self.CX_Vin2Rew2 < -180] += 360
-        #     limitVisRew2 = 15.0
-        #     limitVisRew = 15.0
-        #     NoiseRatio = float(limitVisRew2/limitVisRew)
-        #     self.CX_Vin2Rew2[abs(self.CX_Vin2Rew2) <= limitVisRew2] = 1.0/NoiseRatio
-        #     self.CX_Vin2Rew2[abs(self.CX_Vin2Rew2) > limitVisRew2] = 0.0 #Pos
-        #
-        # ## Shifted
-        # self.CX_Vin2Rew += 0
-        # self.CX_Vin2Rew[self.CX_Vin2Rew > 180] -= 360
-        # self.CX_Vin2Rew[self.CX_Vin2Rew < -180] += 360
-        # # print(self.CX_Vin2Rew)
-        #
-        # ## Smooth
-        # # self.CX_Vin2Rew = (90 - abs(self.CX_Vin2Rew)) / 180 #Pos&Neg
-        # # self.CX_Vin2Rew = (180 - abs(self.CX_Vin2Rew)) / 180 #Pos
-        # # self.CX_Vin2Rew = abs(self.CX_Vin2Rew) / 180 #Neg
-        # ## Discrete
-        # limitVisRew = 15.0
-        # self.CX_Vin2Rew[abs(self.CX_Vin2Rew) <= limitVisRew] = 1.0
-        # self.CX_Vin2Rew[abs(self.CX_Vin2Rew) > limitVisRew] = 0.0 #Pos
-        # # self.CX_Vin2Rew[abs(self.CX_Vin2Rew) <= limitVisRew] = 1.0
-        # # self.CX_Vin2Rew[abs(self.CX_Vin2Rew) >= 180 - limitVisRew] = -1.0
-        # # self.CX_Vin2Rew[(abs(self.CX_Vin2Rew) < 180 - limitVisRew) & (abs(self.CX_Vin2Rew) > limitVisRew)] = 0 #PosNeg
-        #
-        # # print(np.unique(self.CX_Vin2Rew))
-        #
-        # # dimNet = self.CX_net.shape
-        # # shuffledNet = self.CX_net.reshape(dimNet[0]*dimNet[1])
-        # # np.random.shuffle(shuffledNet)
-        # # self.CX_net = shuffledNet.reshape(dimNet) #randomized
-
-        # self.CX_PB1 = np.zeros((1, len(self.Eye_rf_ang))) @ self.CX_net
-
+        
         ##########################
         ## CX connectomic matrixes
-
         fig, axs = mp.subplots(3, 3)
         igraph = 0
 
@@ -1197,12 +1033,8 @@ class Agent_sim(pyglet.window.Window):
 
         self.CX_EPG2D7 = np.zeros((len(self.CX_EB_EPG), len(self.CX_PB_Delta7)))
         idx_input = np.arange(len(self.CX_EB_EPG))
-        # idx_input_half = np.remainder(idx_input_half, 8)
-        # idx_input = np.concatenate((idx_input_half, idx_input_half))
         span_in = 1
         idx_output = np.arange(len(self.CX_PB_Delta7))
-        # idx_output_half = np.remainder(idx_output_half, 8)
-        # idx_output = np.concatenate((idx_output_half, idx_output_half))
         span_out = 7
         for ineuron1 in range(self.CX_EPG2D7.shape[0]):
             modulator1 = np.zeros(idx_input.shape)
@@ -1365,7 +1197,6 @@ class Agent_sim(pyglet.window.Window):
         axs[Xaxis, Yaxis].set_title('\u03947-to-PEG/PEN/PFN/PFL')
         igraph += 1
 
-
         self.CX_NO2PEN = np.zeros((len(self.CX_NO), len(self.CX_PB_PEN)))
         for ineuron1 in range(len(self.CX_NO)):
             for ineuron2 in range(len(self.CX_PB_PEN)):
@@ -1376,9 +1207,6 @@ class Agent_sim(pyglet.window.Window):
 
         ## Vector Steering system
         self.CX_PB_PFNc = np.zeros(16)
-        self.CX_PB_PFN_loc = np.zeros(16)
-        self.CX_PB_PFN_int = np.zeros(16)
-        self.CX_PB_PFN_glo = np.zeros(16)
         self.CX_PB_PFL3 = np.zeros(16)
         self.CX_LAL = np.zeros(2)
 
@@ -1555,64 +1383,12 @@ class Agent_sim(pyglet.window.Window):
                 elif (ineuron1 >= 8) & (ineuron2 >= 8):
                     self.CX_PFN2hDc[ineuron1, ineuron2] = sum(modulator1 * modulator2)
 
-
-        self.CX_PFN2hDc_loc = self.CX_PFN2hDc.copy()
-        self.CX_PFN2hDc_int = self.CX_PFN2hDc.copy()
-        self.CX_PFN2hDc_glo = self.CX_PFN2hDc.copy()
-        self.CX_PFN2hDc_init = self.CX_PFN2hDc.copy()
-
-        # for ineuron1 in range(self.CX_PFN2hDc.shape[0]):
-        #     for ineuron2 in range(self.CX_PFN2hDc.shape[1]):
-        #         if ineuron1 == ineuron2:
-        #             self.CX_PFN2hDc[ineuron1, ineuron2] = 1.0
-
-        # self.CX_hDc2PFL = np.zeros((len(self.CX_FB_hDc), len(self.CX_PB_PFL3)))
-        # idx_input_half = np.arange(int(len(self.CX_FB_hDc) / 2))
-        # shift = 4
-        # idx_input_half1 = np.remainder(idx_input_half - shift, 8)
-        # idx_input_half2 = np.remainder(idx_input_half + shift, 8)
-        # idx_input = np.concatenate((idx_input_half1, idx_input_half2))
-        # span_in = 1
-        # idx_output_half = np.arange(int(len(self.CX_PB_PFL3) / 2))
-        # idx_output_half = np.remainder(idx_output_half, 8)
-        # idx_output = np.concatenate((idx_output_half, idx_output_half))
-        # span_out = 1
-        # for ineuron1 in range(self.CX_hDc2PFL.shape[0]):
-        #     modulator1 = np.zeros(idx_output.shape)
-        #     imax = int(span_in / 2)
-        #     for ispan in range(imax + 1):
-        #         idx1 = np.remainder(idx_input[ineuron1] + ispan, 8)
-        #         idx2 = np.remainder(idx_input[ineuron1] - ispan, 8)
-        #         modulator1[idx_output == idx1] = 1.0 - ispan / int((span_in + 1) / 2)
-        #         modulator1[idx_output == idx2] = 1.0 - ispan / int((span_in + 1) / 2)
-        #
-        #     for ineuron2 in range(self.CX_hDc2PFL.shape[1]):
-        #         modulator2 = np.zeros(idx_output.shape)
-        #         imax = int(span_out / 2)
-        #         for ispan in range(imax + 1):
-        #             idx1 = np.remainder(idx_output[ineuron2] + ispan, 8)
-        #             idx2 = np.remainder(idx_output[ineuron2] - ispan, 8)
-        #             modulator2[idx_output == idx1] = 1.0 - ispan / int((span_out + 1) / 2)
-        #             modulator2[idx_output == idx2] = 1.0 - ispan / int((span_out + 1) / 2)
-        #
-        #         modulator1[modulator1 < 0] = 0
-        #         modulator2[modulator2 < 0] = 0
-        #         if (ineuron1 < 8) & (ineuron2 < 8):
-        #             self.CX_hDc2PFL[ineuron1, ineuron2] = sum(modulator1 * modulator2)
-        #         elif (ineuron1 >= 8) & (ineuron2 >= 8):
-        #             self.CX_hDc2PFL[ineuron1, ineuron2] = sum(modulator1 * modulator2)
-
         self.CX_hDc2PFL = np.zeros((len(self.CX_FB_hDc), len(self.CX_PB_PFL3)))
         idx_input = np.arange(len(self.CX_FB_hDc))
         shift = 8
         idx_input = np.remainder(idx_input + shift, 16)
-        # idx_input_half1 = np.remainder(idx_input_half - shift, 8)
-        # idx_input_half2 = np.remainder(idx_input_half + shift, 8)
-        # idx_input = np.concatenate((idx_input_half1, idx_input_half2))
         span_in = 1
         idx_output = np.arange(int(len(self.CX_PB_PFL3)))
-        # idx_output_half = np.remainder(idx_output_half, 8)
-        # idx_output = np.concatenate((idx_output_half, idx_output_half))
         span_out = 1
         for ineuron1 in range(self.CX_hDc2PFL.shape[0]):
             modulator1 = np.zeros(idx_output.shape)
@@ -1654,8 +1430,8 @@ class Agent_sim(pyglet.window.Window):
         fig.set_size_inches(12, 12)
         mp.tight_layout()
         # mp.show()
-        if not os.path.exists(self.name_saved[0:-6] + 'NeuroNets_matrix.pdf'):
-            fig.savefig(self.name_saved[0:-6] + 'NeuroNets_matrix.pdf', dpi=600)
+        # if not os.path.exists(self.name_saved[0:-6] + 'NeuroNets_matrix.pdf'):
+        #     fig.savefig(self.name_saved[0:-6] + 'NeuroNets_matrix.pdf', dpi=600)
 
         mp.close(fig)
 
@@ -1693,8 +1469,8 @@ class Agent_sim(pyglet.window.Window):
         self.VM2FBt = np.zeros((2, 3))
         self.VM2FBt[0, 0] = 0.5
         self.VM2FBt[1, 0] = 0.5
-        self.VM2FBt[0, 1] = 0.5
-        self.VM2FBt[1, 1] = 0.5
+        # self.VM2FBt[0, 1] = 0.5
+        # self.VM2FBt[1, 1] = 0.5
 
         if self.Scenario == 'CT':
             self.Explo2FBt = np.zeros((2, 3))
@@ -1705,6 +1481,8 @@ class Agent_sim(pyglet.window.Window):
 
         self.learning = False
         self.antilearning = False
+
+        print('-> CX connectivity generated')
 
         ## MB nets
         self.ref_thresh = MB_thresh
@@ -1760,6 +1538,8 @@ class Agent_sim(pyglet.window.Window):
                                                                  dtype=np.float32)
 
         self.MBmemo = np.zeros(self.Monocular_eye.ommatidies_ID.shape[0])
+
+        print('-> MB connectivity generated')
 
         self.familiarity = 0.0
         self.proprioception = 0.0
@@ -1856,6 +1636,8 @@ class Agent_sim(pyglet.window.Window):
         self.SourceExplored = 0
 
         self.Sight = False
+
+        print('-> Model initiated')
 
     def on_draw(self):
         self.clear()
@@ -2526,6 +2308,7 @@ class Agent_sim(pyglet.window.Window):
                         self.it += 1
 
             else:
+
                 if self.Scenario == 'VD':
                     dist2target = np.sqrt((self.translation_x - self.Target_location[0]) ** 2 + (self.translation_y - self.Target_location[1]) ** 2)
                 elif (self.Scenario == 'VM') | (self.Scenario == 'VM2'):
@@ -2551,22 +2334,23 @@ class Agent_sim(pyglet.window.Window):
                 elif self.Scenario == 'VM':
                     if (self.VecMemo == 1) & (dist2nest > 200) & self.Back:
                         self.Food = 1
-                        self.FindFood = True
-                        # self.DAN_FBt_hdc[2] = 1
+                        # self.FindFood = True
+                        self.DAN_FBt_hdc[0] = 1
                         print('---> Limit reached')
-                        print('Target at coordinates: X =', str(self.translation_x[0]),'| Y =', str(self.translation_y[0]))
+                        print('Target at coordinates: X =', str(self.translation_x), '| Y =', str(self.translation_y))
                         self.Target_location = [self.translation_x , self.translation_y]
                         self.Target_on = True
                         self.it = 0
                     else:
-                        self.DAN_FBt_hdc[2] = 0
+                        self.DAN_FBt_hdc[0] = 0
                 elif self.Scenario == 'VM2':
                     if (self.VecMemo == 1) & (dist2nest > 200) & self.Back:
                         self.Food = 1
                         self.DAN_FBt_hdc[self.SourceExplored] = 1
                         self.SourceExplored += 1
                         print('---> Limit reached')
-                        print('Target', self.SourceExplored ,'at coordinates: X =', str(self.translation_x[0]),'| Y =', str(self.translation_y[0]))
+                        print('Target', self.SourceExplored, 'at coordinates: X =', str(self.translation_x),
+                              '| Y =', str(self.translation_y))
                         self.Target_location = [self.translation_x, self.translation_y]
                         self.Target_on = True
                         self.it = 0
@@ -2594,7 +2378,7 @@ class Agent_sim(pyglet.window.Window):
 
                 if self.Back & ((self.Scenario == 'VM') | (self.Scenario == 'VM2')) & (self.VecMemo == 1):
                     ## Zig-Zag pattern
-                    self.CX_update()
+                    Delta_CX = self.CX_update()
                     orientation_initial = self.rotation_z.copy()
                     if self.it == 51:
                         self.DirTravel = np.random.uniform(0.0, 360.0, 1)[0]
@@ -2981,17 +2765,16 @@ if __name__ == "__main__":
 
     path_frame = tk.Frame(save_frame)
     path_frame.pack(fill='x')
-    path_init = tk.StringVar(value=savepath_default)
+    path_init = tk.StringVar()
+    path_init.set(savepath_default)
     tk.Label(path_frame, text='Main folder', padx=5).pack(side='left')
     tk.Entry(path_frame, textvariable=path_init).pack(side='left', fill='x', expand=1)
-
 
     def browse_rootpath():
         rootpath = filedialog.askdirectory(initialdir=path_init.get())
         if rootpath[-1] != '/':
             rootpath += '/'
         path_init.set(rootpath)
-
 
     tk.Button(path_frame, text='Browse', command=browse_rootpath).pack(side='left')
 
@@ -3021,7 +2804,6 @@ if __name__ == "__main__":
     scenario_combo.grid(row=1, column=0, padx=20)
 
     root_paramModel.worldpath = ''
-
 
     def worldchoice():
         file_path = filedialog.askopenfilename(initialdir=savepath_default + '/Worlds_pyOpenGL',
@@ -3055,7 +2837,6 @@ if __name__ == "__main__":
     scenar = tk.StringVar(value='CT')
     root_paramModel.launch = False
 
-
     def startsimu():
         if scenario_select.get() == scenario_list[0]:
             scenar.set('CT')  # Control simulation (innate motor control)
@@ -3076,7 +2857,6 @@ if __name__ == "__main__":
         root_paramModel.launch = True
 
         root_paramModel.quit()
-
 
     tk.Button(root_paramModel, text='Launch', command=startsimu, padx=5).pack(side='bottom')
 
@@ -3143,10 +2923,10 @@ if __name__ == "__main__":
         else:
             search = 'OFF'
 
-    # ScriptName = __file__[target+1:]
-    # src = ScriptName
-    # dst = name_folder + 'SimuCode.py'
-    # shutil.copyfile(src, dst)
+    ScriptName = __file__[target+1:]
+    src = ScriptName
+    dst = name_folder + 'SimuCode.py'
+    shutil.copyfile(src, dst)
     filetxt_params = open(name_folder + "Obj_parameters_exp.txt", "a")
     filetxt_params.write('Exp' + '\t'
                          + 'Object' + '\t'
