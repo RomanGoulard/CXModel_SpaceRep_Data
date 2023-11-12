@@ -1705,14 +1705,14 @@ class Agent_sim(pyglet.window.Window):
         self.CX_NOt = np.asarray([np.sign(self.speed)])
 
         EB_EPG_temp = (0.8 * self.CX_Polin
-                       + 0.1 * self.CX_PB_PEN @ self.CX_PEN2EPG
+                       + 0.5 * self.CX_PB_PEN @ self.CX_PEN2EPG
                        + 0.6 * self.CX_PB_PEG @ self.CX_PEG2EPG)
         EB_EPG_temp[EB_EPG_temp < 0.0] = 0.0
         EB_EPG_temp[EB_EPG_temp > 1.0] = 1.0
 
         PB_PEN_temp = (0.5 * (self.CX_EB_EPG @ self.CX_EPG2PEN)
-                       + 0.5 * self.CX_NO @ self.CX_NO2PEN
-                       + 0.2 * self.CX_PB_Delta7 @ self.CX_D72PEN)
+                       + 0.8 * self.CX_NO @ self.CX_NO2PEN
+                       + 0.3 * self.CX_PB_Delta7 @ self.CX_D72PEN)
         PB_PEN_temp[PB_PEN_temp < 0.0] = 0.0
         PB_PEN_temp[PB_PEN_temp > 1.0] = 1.0
 
@@ -1892,7 +1892,6 @@ class Agent_sim(pyglet.window.Window):
         image_blue_array = image[:, :, 2]
 
         image_green = np.flipud(image_green_array).reshape(self.Height*self.Width)
-        image_bluechannel = np.stack((np.zeros_like(image_red_array), np.zeros_like(image_green_array), image_blue_array), axis=2)
 
         self.vision_att_brut = self.Monocular_eye.process(image_green, self.Eye_rf_list)
         self.vision_att = self.vision_att_brut.copy()
@@ -2004,6 +2003,8 @@ class Agent_sim(pyglet.window.Window):
 
             ##############
             #### Behaviour
+
+            dist2target = float('inf')
             if self.Scenario == 'CT':
                 Delta_CX = self.CX_update()
                 orientation_initial = self.rotation_z.copy()
@@ -2202,63 +2203,72 @@ class Agent_sim(pyglet.window.Window):
                         self.proprioception = orientation_final - orientation_initial
                         self.it += 1
 
-            else:
+            elif self.Scenario == 'VD':
+                if self.Blink & (dist2target < 50):
+                    self.Target_on = False
 
-                if self.Scenario == 'VD':
+                dist2target = np.sqrt((self.translation_x - self.Target_location[0]) ** 2 + (self.translation_y - self.Target_location[1]) ** 2)
+
+                if (self.Exploration == 1) & (dist2target < self.Target_size[0]) & (not self.Blink) & self.Back:
+                    self.Food = 1
+                    self.DAN_FBt_hdc[2] = 1
+                    print('\t==> Target reached after', str(self.it), 'steps')
+                    self.it = 0
+                    self.CX_FBt2PFN[0, :] = -np.ones_like(self.CX_FBt2PFN[0, :]) * 0.5 #reinitialize
+                else:
+                    self.DAN_FBt_hdc[2] = 0
+
+                if ((self.Exploration == 0) & (self.VecMemo == 0)) & (dist2nest < 20):
+                    print('\t==> Home reached after', str(self.it), 'steps')
+                    self.Food = 0
+                    # self.Exploration = 1 #2nd go using sensory-driven behaviour
+                    self.VecMemo = 1 #2nd go using vector memory
+                    self.it = 0
+                    self.Return = 0
+                    self.translation_x = 0.0
+                    self.translation_y = 0.0
+                    self.rotation_z = np.random.uniform(0.0, 360.0, 1)[0] #random orientation: coming out of the nest?
+                    self.Back = False # No stop & homing at the food anymore
+                    self.CX_FBt2PFN[0, :] = -np.ones_like(self.CX_FBt2PFN[0, :]) * 0.5 #reinitialize
+
+
+                Delta_CX = self.CX_update()
+                orientation_initial = self.rotation_z.copy()
+                k_CX = abs(Delta_CX) / self.Max_DeltaCX
+                inst_noise = (1 - k_CX) * self.MotorNoise
+                self.rotation_z += Delta_CX + np.random.normal(0.0, self.MotorNoise, 1)
+                self.translation_y += np.sin(np.radians(self.rotation_z)) * self.speed
+                self.translation_x += np.cos(np.radians(self.rotation_z)) * self.speed
+                orientation_final = self.rotation_z.copy()
+                self.proprioception = orientation_final - orientation_initial
+
+                if (self.Exploration == 1) & (self.Food == 1):
+                    self.Exploration = 0
+                    self.Return = 1
+                    print('\t==> Homing engaged')
+
+            elif self.Scenario == 'VM':
+                if self.Target_on:
                     dist2target = np.sqrt((self.translation_x - self.Target_location[0]) ** 2 + (self.translation_y - self.Target_location[1]) ** 2)
-                elif (self.Scenario == 'VM') | (self.Scenario == 'VM2'):
-                    if self.Target_on:
-                        dist2target = np.sqrt((self.translation_x - self.Target_location[0]) ** 2 + (self.translation_y - self.Target_location[1]) ** 2)
-                    else:
-                        dist2target = float('inf')
                 else:
                     dist2target = float('inf')
 
-                if (self.Scenario == 'VD') & self.Blink & (dist2target < 50):
-                    self.Target_on = False
+                if (self.VecMemo == 1) & (dist2nest > 200) & self.Back:
+                    self.Food = 1
+                    # self.FindFood = True
+                    self.DAN_FBt_hdc[0] = 1
+                    print('\t==> Food source reached at coordinates:', str(self.translation_x), '| ', str(self.translation_y))
+                    self.Target_location = [self.translation_x , self.translation_y]
+                    self.Target_on = True
+                    self.it = 0
+                else:
+                    self.DAN_FBt_hdc[0] = 0
 
-                if self.Scenario == 'VD':
-                    if (self.Exploration == 1) & (dist2target < self.Target_size[0]) & (not self.Blink) & self.Back:
-                        self.Food = 1
-                        self.DAN_FBt_hdc[2] = 1
-                        print('\t==> Target reached after', str(self.it), 'steps')
-                        self.it = 0
-                        self.CX_FBt2PFN[0, :] = -np.ones_like(self.CX_FBt2PFN[0, :]) * 0.5
-                    else:
-                        self.DAN_FBt_hdc[2] = 0
-                elif self.Scenario == 'VM':
-                    if (self.VecMemo == 1) & (dist2nest > 200) & self.Back:
-                        self.Food = 1
-                        # self.FindFood = True
-                        self.DAN_FBt_hdc[0] = 1
-                        print('\t==> Food source reached at coordinates:', str(self.translation_x), '| ', str(self.translation_y))
-                        self.Target_location = [self.translation_x , self.translation_y]
-                        self.Target_on = True
-                        self.it = 0
-                    else:
-                        self.DAN_FBt_hdc[0] = 0
-                elif self.Scenario == 'VM2':
-                    if (self.VecMemo == 1) & (dist2nest > 200) & self.Back:
-                        self.Food = 1
-                        self.DAN_FBt_hdc[self.SourceExplored] = 1
-                        self.SourceExplored += 1
-                        print('\t==> Food source #', self.SourceExplored, 'reach at coordinates:', str(self.translation_x),
-                              '| ', str(self.translation_y))
-                        self.Target_location = [self.translation_x, self.translation_y]
-                        self.Target_on = True
-                        self.it = 0
-                    else:
-                        self.DAN_FBt_hdc[0] = 0
-                        self.DAN_FBt_hdc[1] = 0
-
-                if ((self.Exploration == 0) & (self.VecMemo == 0)) & (np.sqrt(self.translation_x ** 2 + self.translation_y ** 2) < 20):
+                if (self.VecMemo == 0) & (dist2nest < 20):
                     print('\t==> Home reached after', str(self.it), 'steps')
                     self.Food = 0
-                    if self.Scenario == 'VD':
-                        self.VecMemo = 1
-                    elif (self.Scenario == 'VM') | (self.Scenario == 'VM2'):
-                        self.VecMemo = 1
-                        self.Turn = 0
+                    self.VecMemo = 1
+                    self.Turn = 0
                     self.it = 0
                     self.Return = 0
                     self.translation_x = 0.0
@@ -2266,10 +2276,9 @@ class Agent_sim(pyglet.window.Window):
                     self.rotation_z = np.random.uniform(0.0, 360.0, 1)[0]
                     self.Back = False
                     self.CX_FBt2PFN[0, :] = -np.ones_like(self.CX_FBt2PFN[0, :]) * 0.5
-                    if (self.Scenario == 'VM2') & (self.SourceExplored < 2):
-                        self.Back = True
 
-                if self.Back & ((self.Scenario == 'VM') | (self.Scenario == 'VM2')) & (self.VecMemo == 1):
+
+                if self.Back & (self.VecMemo == 1):
                     ## Zig-Zag pattern
                     Delta_CX = self.CX_update()
                     orientation_initial = self.rotation_z.copy()
@@ -2310,7 +2319,7 @@ class Agent_sim(pyglet.window.Window):
                     orientation_final = self.rotation_z.copy()
                     self.proprioception = orientation_final - orientation_initial
 
-                elif self.Scenario != 'CT':
+                else:
                     Delta_CX = self.CX_update()
                     orientation_initial = self.rotation_z.copy()
                     k_CX = abs(Delta_CX) / self.Max_DeltaCX
@@ -2321,77 +2330,169 @@ class Agent_sim(pyglet.window.Window):
                     orientation_final = self.rotation_z.copy()
                     self.proprioception = orientation_final - orientation_initial
 
-                if ((self.Exploration == 1) | (self.VecMemo == 1)) & (self.Food == 1):
+                if (self.VecMemo == 1) & (self.Food == 1):
+                    self.VecMemo = 0
+                    self.Return = 1
+                    print('\t==> Homing engaged')
+
+            elif self.Scenario == 'VM2':
+                if self.Target_on:
+                    dist2target = np.sqrt((self.translation_x - self.Target_location[0]) ** 2 + (self.translation_y - self.Target_location[1]) ** 2)
+                else:
+                    dist2target = float('inf')
+
+                if (self.VecMemo == 1) & (dist2nest > 200) & self.Back:
+                    self.Food = 1
+                    self.DAN_FBt_hdc[self.SourceExplored] = 1
+                    self.SourceExplored += 1
+                    print('\t==> Food source #', self.SourceExplored, 'reach at coordinates:', str(self.translation_x),
+                          '| ', str(self.translation_y))
+                    self.Target_location = [self.translation_x, self.translation_y]
+                    self.Target_on = True
+                    self.it = 0
+                else:
+                    self.DAN_FBt_hdc[0] = 0
+                    self.DAN_FBt_hdc[1] = 0
+
+                if ((self.Exploration == 0) & (self.VecMemo == 0)) & (dist2nest < 20):
+                    print('\t==> Home reached after', str(self.it), 'steps')
+                    self.Food = 0
+                    self.VecMemo = 1
+                    self.Turn = 0
+                    self.it = 0
+                    self.Return = 0
+                    self.translation_x = 0.0
+                    self.translation_y = 0.0
+                    self.rotation_z = np.random.uniform(0.0, 360.0, 1)[0]
+                    self.CX_FBt2PFN[0, :] = -np.ones_like(self.CX_FBt2PFN[0, :]) * 0.5
+                    if self.SourceExplored < 2:
+                        self.Back = True
+                    else:
+                        self.Back = False
+
+                if self.Back & (self.VecMemo == 1):
+                    ## Zig-Zag pattern
+                    Delta_CX = self.CX_update()
+                    orientation_initial = self.rotation_z.copy()
+                    if self.it == 51:
+                        self.DirTravel = np.random.uniform(0.0, 360.0, 1)[0]
+                        self.rotation_z = self.DirTravel
+                        self.Turn = 0
+                        self.TurnWay = np.sign(np.random.uniform(-1, 1, 1)[0])
+                    elif (np.sqrt(self.translation_x ** 2 + self.translation_y ** 2) > 80) & (self.Turn == 0):
+                        self.DirTravel += self.TurnWay * np.random.uniform(100.0, 120.0, 1)[0]
+                        self.rotation_z = self.DirTravel
+                        self.Turn = 1
+                        self.TurnWay *= -1
+                    elif (np.sqrt(self.translation_x ** 2 + self.translation_y ** 2) > 160) & (self.Turn == 1):
+                        self.DirTravel += self.TurnWay * np.random.uniform(60.0, 90.0, 1)[0]
+                        self.rotation_z = self.DirTravel
+                        self.Turn = 2
+                        self.TurnWay *= -1
+                    elif (np.sqrt(self.translation_x ** 2 + self.translation_y ** 2) > 240) & (self.Turn == 2):
+                        self.DirTravel += self.TurnWay * np.random.uniform(20.0, 45.0, 1)[0]
+                        self.rotation_z = self.DirTravel
+                        self.Turn = 3
+                        self.TurnWay *= -1
+                    elif (np.sqrt(self.translation_x ** 2 + self.translation_y ** 2) > 290) & (self.Turn == 3):
+                        self.DirTravel += self.TurnWay * np.random.uniform(20.0, 40.0, 1)[0]
+                        self.rotation_z = self.DirTravel
+                        self.Turn = 4
+                        self.TurnWay *= -1
+                    elif (np.sqrt(self.translation_x ** 2 + self.translation_y ** 2) > 350) & (self.Turn == 4):
+                        self.DirTravel += self.TurnWay * np.random.uniform(10.0, 30.0, 1)[0]
+                        self.rotation_z = self.DirTravel
+                        self.Turn = 5
+                        self.TurnWay *= -1
+
+                    self.rotation_z += np.random.normal(0.0, 1.0, 1)
+                    self.translation_y += np.sin(np.radians(self.rotation_z)) * self.speed
+                    self.translation_x += np.cos(np.radians(self.rotation_z)) * self.speed
+                    orientation_final = self.rotation_z.copy()
+                    self.proprioception = orientation_final - orientation_initial
+
+                else:
+                    Delta_CX = self.CX_update()
+                    orientation_initial = self.rotation_z.copy()
+                    k_CX = abs(Delta_CX) / self.Max_DeltaCX
+                    inst_noise = (1 - k_CX) * self.MotorNoise
+                    self.rotation_z += Delta_CX + np.random.normal(0.0, self.MotorNoise, 1)
+                    self.translation_y += np.sin(np.radians(self.rotation_z)) * self.speed
+                    self.translation_x += np.cos(np.radians(self.rotation_z)) * self.speed
+                    orientation_final = self.rotation_z.copy()
+                    self.proprioception = orientation_final - orientation_initial
+
+                if (self.VecMemo == 1) & (self.Food == 1):
                     self.Exploration = 0
                     self.VecMemo = 0
                     self.Return = 1
                     print('\t==> Homing engaged')
         ###############################
         #### Neurons activity recording
-            if self.Display_neurons:
-                thetas = self.CX_cards/180 * np.pi
-                for irow in range(self.ax_tableau2bord.shape[0]):
-                    for icol in range(self.ax_tableau2bord.shape[1]):
-                        self.ax_tableau2bord[irow, icol].cla()
-                self.ax_tableau2bord[0, 0].bar(np.arange(1, 9)+0.15, self.CX_EB_EPG[0:8], width=0.3, color='r')
-                self.ax_tableau2bord[0, 0].bar(np.arange(1, 9)-0.15, self.CX_EB_EPG[8:], width=0.3, color='g')
-                self.ax_tableau2bord[0, 0].set_ylim([0.0, 1.0])
-                self.ax_tableau2bord[0, 0].title.set_text('EPG')
-                self.ax_tableau2bord[0, 1].bar(np.arange(1, 9)+0.15, self.CX_PB_Delta7[0:8], width=0.3, color='r')
-                self.ax_tableau2bord[0, 1].bar(np.arange(1, 9)-0.15, self.CX_PB_Delta7[8:], width=0.3, color='g')
-                self.ax_tableau2bord[0, 1].set_ylim([0.0, 1.0])
-                self.ax_tableau2bord[0, 1].title.set_text('\u03947')
-                self.ax_tableau2bord[1, 0].bar(np.arange(1, 9)+0.15, self.CX_PB_PFN_glo[0:8], width=0.3, color='r')
-                self.ax_tableau2bord[1, 0].bar(np.arange(1, 9)-0.15, self.CX_PB_PFN_glo[8:], width=0.3, color='g')
-                self.ax_tableau2bord[1, 0].set_ylim([0.0, 1.0])
-                self.ax_tableau2bord[1, 0].title.set_text('PFNc')
-                self.ax_tableau2bord[1, 1].bar(np.arange(1, 9)+0.15, self.CX_FB_hDc[0:8], width=0.3, color='r')
-                self.ax_tableau2bord[1, 1].bar(np.arange(1, 9)-0.15, self.CX_FB_hDc[8:], width=0.3, color='g')
-                self.ax_tableau2bord[1, 1].set_ylim([0.0, 1.0])
-                self.ax_tableau2bord[1, 1].title.set_text('h\u0394c')
-                self.ax_tableau2bord[1, 2].bar(np.arange(1, 9)+0.15, self.CX_PB_PFL3[0:8], width=0.3, color='r')
-                self.ax_tableau2bord[1, 2].bar(np.arange(1, 9)-0.15, self.CX_PB_PFL3[8:], width=0.3, color='g')
-                self.ax_tableau2bord[1, 2].set_ylim([0.0, 1.0])
-                self.ax_tableau2bord[1, 2].title.set_text('PFL3')
-                self.ax_tableau2bord[2, 0].imshow(self.CX_FBt2PFN)
-                self.ax_tableau2bord[2, 0].set_xlabel('FBt')
-                self.ax_tableau2bord[2, 0].set_ylabel('PFN')
-                self.ax_tableau2bord[2, 0].title.set_text('FBt-to-PFNc')
-                self.ax_tableau2bord[2, 1].imshow(self.CX_FBt2hDc)
-                self.ax_tableau2bord[2, 1].set_xlabel('FBt')
-                self.ax_tableau2bord[2, 1].set_ylabel('h\u0394c')
-                self.ax_tableau2bord[2, 1].title.set_text('FBt-to-h\u0394c')
-
-                self.ax_tableau2bord[2, 2].bar([2, 1], self.CX_LAL, tick_label=['Right', 'Left'])
-                self.ax_tableau2bord[2, 2].set_ylim([0, 8])
-                self.ax_tableau2bord[2, 2].title.set_text('LAL')
-                if self.Exploration == 1:
-                    color_fleche = 'r'
-                else:
-                    color_fleche = 'g'
-                if self.it >= 2:
-                    self.ax_tableau2bord[0, 2].plot(np.asarray(self.Pose_Mat)[:, 0], np.asarray(self.Pose_Mat)[:, 1], 'b')
-                    self.ax_tableau2bord[0, 2].plot(np.asarray([self.translation_x, self.translation_x + np.cos(np.radians(self.rotation_z)) * 15]),
-                                                        np.asarray([self.translation_y, self.translation_y + np.sin(np.radians(self.rotation_z)) * 15]),
-                                                        color_fleche)
-
-                    for isource in range(self.Food_sources_nb):
-                        self.ax_tableau2bord[0, 2].plot(self.Food_sources_locationxy[isource][0], self.Food_sources_locationxy[isource][1], 'xc')
-                        # self.ax_tableau2bord[0, 2].text(self.Food_sources_locationxy[isource][0] + 2, self.Food_sources_locationxy[isource][1] + 2,
-                        #                                 str(np.round(P_odor[isource], 3)), fontsize=4)
-
-                    if bool(self.Exploration):
-                        self.ax_tableau2bord[0, 2].text(298, 298, 'Exploration', color='r', fontsize=6, ha='right', va='top')
-                    elif bool(self.Return):
-                        self.ax_tableau2bord[0, 2].text(298, 298, 'Return', color='g', fontsize=6, ha='right', va='top')
-
-                    self.ax_tableau2bord[0, 2].title.set_text('XY')
-                    self.ax_tableau2bord[0, 2].set_xlim([-300, 300])
-                    self.ax_tableau2bord[0, 2].set_ylim([-300, 300])
-                    self.ax_tableau2bord[0, 2].set_aspect('equal', adjustable='box')
-
-                mp.draw()
-                mp.pause(0.001)
+            # if self.Display_neurons:
+            #     thetas = self.CX_cards/180 * np.pi
+            #     for irow in range(self.ax_tableau2bord.shape[0]):
+            #         for icol in range(self.ax_tableau2bord.shape[1]):
+            #             self.ax_tableau2bord[irow, icol].cla()
+            #     self.ax_tableau2bord[0, 0].bar(np.arange(1, 9)+0.15, self.CX_EB_EPG[0:8], width=0.3, color='r')
+            #     self.ax_tableau2bord[0, 0].bar(np.arange(1, 9)-0.15, self.CX_EB_EPG[8:], width=0.3, color='g')
+            #     self.ax_tableau2bord[0, 0].set_ylim([0.0, 1.0])
+            #     self.ax_tableau2bord[0, 0].title.set_text('EPG')
+            #     self.ax_tableau2bord[0, 1].bar(np.arange(1, 9)+0.15, self.CX_PB_Delta7[0:8], width=0.3, color='r')
+            #     self.ax_tableau2bord[0, 1].bar(np.arange(1, 9)-0.15, self.CX_PB_Delta7[8:], width=0.3, color='g')
+            #     self.ax_tableau2bord[0, 1].set_ylim([0.0, 1.0])
+            #     self.ax_tableau2bord[0, 1].title.set_text('\u03947')
+            #     self.ax_tableau2bord[1, 0].bar(np.arange(1, 9)+0.15, self.CX_PB_PFN_glo[0:8], width=0.3, color='r')
+            #     self.ax_tableau2bord[1, 0].bar(np.arange(1, 9)-0.15, self.CX_PB_PFN_glo[8:], width=0.3, color='g')
+            #     self.ax_tableau2bord[1, 0].set_ylim([0.0, 1.0])
+            #     self.ax_tableau2bord[1, 0].title.set_text('PFNc')
+            #     self.ax_tableau2bord[1, 1].bar(np.arange(1, 9)+0.15, self.CX_FB_hDc[0:8], width=0.3, color='r')
+            #     self.ax_tableau2bord[1, 1].bar(np.arange(1, 9)-0.15, self.CX_FB_hDc[8:], width=0.3, color='g')
+            #     self.ax_tableau2bord[1, 1].set_ylim([0.0, 1.0])
+            #     self.ax_tableau2bord[1, 1].title.set_text('h\u0394c')
+            #     self.ax_tableau2bord[1, 2].bar(np.arange(1, 9)+0.15, self.CX_PB_PFL3[0:8], width=0.3, color='r')
+            #     self.ax_tableau2bord[1, 2].bar(np.arange(1, 9)-0.15, self.CX_PB_PFL3[8:], width=0.3, color='g')
+            #     self.ax_tableau2bord[1, 2].set_ylim([0.0, 1.0])
+            #     self.ax_tableau2bord[1, 2].title.set_text('PFL3')
+            #     self.ax_tableau2bord[2, 0].imshow(self.CX_FBt2PFN)
+            #     self.ax_tableau2bord[2, 0].set_xlabel('FBt')
+            #     self.ax_tableau2bord[2, 0].set_ylabel('PFN')
+            #     self.ax_tableau2bord[2, 0].title.set_text('FBt-to-PFNc')
+            #     self.ax_tableau2bord[2, 1].imshow(self.CX_FBt2hDc)
+            #     self.ax_tableau2bord[2, 1].set_xlabel('FBt')
+            #     self.ax_tableau2bord[2, 1].set_ylabel('h\u0394c')
+            #     self.ax_tableau2bord[2, 1].title.set_text('FBt-to-h\u0394c')
+            #
+            #     self.ax_tableau2bord[2, 2].bar([2, 1], self.CX_LAL, tick_label=['Right', 'Left'])
+            #     self.ax_tableau2bord[2, 2].set_ylim([0, 8])
+            #     self.ax_tableau2bord[2, 2].title.set_text('LAL')
+            #     if self.Exploration == 1:
+            #         color_fleche = 'r'
+            #     else:
+            #         color_fleche = 'g'
+            #     if self.it >= 2:
+            #         self.ax_tableau2bord[0, 2].plot(np.asarray(self.Pose_Mat)[:, 0], np.asarray(self.Pose_Mat)[:, 1], 'b')
+            #         self.ax_tableau2bord[0, 2].plot(np.asarray([self.translation_x, self.translation_x + np.cos(np.radians(self.rotation_z)) * 15]),
+            #                                             np.asarray([self.translation_y, self.translation_y + np.sin(np.radians(self.rotation_z)) * 15]),
+            #                                             color_fleche)
+            #
+            #         for isource in range(self.Food_sources_nb):
+            #             self.ax_tableau2bord[0, 2].plot(self.Food_sources_locationxy[isource][0], self.Food_sources_locationxy[isource][1], 'xc')
+            #             # self.ax_tableau2bord[0, 2].text(self.Food_sources_locationxy[isource][0] + 2, self.Food_sources_locationxy[isource][1] + 2,
+            #             #                                 str(np.round(P_odor[isource], 3)), fontsize=4)
+            #
+            #         if bool(self.Exploration):
+            #             self.ax_tableau2bord[0, 2].text(298, 298, 'Exploration', color='r', fontsize=6, ha='right', va='top')
+            #         elif bool(self.Return):
+            #             self.ax_tableau2bord[0, 2].text(298, 298, 'Return', color='g', fontsize=6, ha='right', va='top')
+            #
+            #         self.ax_tableau2bord[0, 2].title.set_text('XY')
+            #         self.ax_tableau2bord[0, 2].set_xlim([-300, 300])
+            #         self.ax_tableau2bord[0, 2].set_ylim([-300, 300])
+            #         self.ax_tableau2bord[0, 2].set_aspect('equal', adjustable='box')
+            #
+            #     mp.draw()
+            #     mp.pause(0.001)
 
             self.NO_activity.append(self.CX_NO.tolist())
             self.Polar_activity.append(self.CX_Polin.tolist())
@@ -2405,8 +2506,6 @@ class Agent_sim(pyglet.window.Window):
             self.hDc_in_activity.append(self.CX_FB_hDc_in.tolist())
             self.PFL_activity.append(self.CX_PB_PFL3.tolist())
             self.LAL_activity.append(self.CX_LAL.tolist())
-            self.PImemory_PFL.append(np.sum(self.CX_PFN2PFL, axis=1).tolist())
-            self.PImemory_hDc.append(np.sum(self.CX_PFN2hDc, axis=1).tolist())
             self.FBt_memory.append(self.CX_FBt2PFN.reshape(self.CX_FBt2PFN.shape[0]*self.CX_FBt2PFN.shape[1]).tolist())
             self.FBt_hDc_memory.append(self.CX_FBt2hDc.reshape(self.CX_FBt2hDc.shape[0]*self.CX_FBt2hDc.shape[1]).tolist())
 
@@ -2446,10 +2545,10 @@ class Agent_sim(pyglet.window.Window):
         np.savetxt(name_savedfile, a, delimiter=",")
 
         ## Inputs activity
-        name_savedfile = self.name_saved + 'NO.csv'
+        name_savedfile = self.name_saved + 'NOD.csv'
         a = np.asarray(self.NO_activity, dtype=np.float32)
         np.savetxt(name_savedfile, a, delimiter=",")
-        name_savedfile = self.name_saved + 'Polin.csv'
+        name_savedfile = self.name_saved + 'CIN.csv'
         a = np.asarray(self.Polar_activity, dtype=np.float32)
         np.savetxt(name_savedfile, a, delimiter=",")
 
@@ -2487,19 +2586,11 @@ class Agent_sim(pyglet.window.Window):
         a = np.asarray(self.LAL_activity, dtype=np.float32)
         np.savetxt(name_savedfile, a, delimiter=",")
 
-        ## Path Integrator
-        name_savedfile = self.name_saved + 'PImemo_PFN.csv'
-        a = np.asarray(self.PImemory_PFL, dtype=np.float32)
-        np.savetxt(name_savedfile, a, delimiter=",")
-        name_savedfile = self.name_saved + 'PImemo_hDc.csv'
-        a = np.asarray(self.PImemory_hDc, dtype=np.float32)
-        np.savetxt(name_savedfile, a, delimiter=",")
-
         ## FBt Memory
-        name_savedfile = self.name_saved + 'FBt_memo.csv'
+        name_savedfile = self.name_saved + 'FBt_HD_memo.csv'
         a = np.asarray(self.FBt_memory, dtype=np.float32)
         np.savetxt(name_savedfile, a, delimiter=",")
-        name_savedfile = self.name_saved + 'FBt_hDc_memo.csv'
+        name_savedfile = self.name_saved + 'FBt_PI_memo.csv'
         a = np.asarray(self.FBt_hDc_memory, dtype=np.float32)
         np.savetxt(name_savedfile, a, delimiter=",")
 
@@ -2602,7 +2693,7 @@ if __name__ == "__main__":
     start = 0
 
     while search:
-        look = file_root.find('/', start)
+        look = file_root.find('\\', start)
         if look == -1:
             search = False
         else:
@@ -2651,12 +2742,12 @@ if __name__ == "__main__":
     path_init = tk.StringVar()
     path_init.set(savepath_default)
     tk.Label(path_frame, text='Main folder', padx=5).pack(side='left')
-    tk.Entry(path_frame, textvariable=path_init).pack(side='left', fill='x', expand=1)
+    tk.Entry(path_frame, textvariable=path_init, width=60).pack(side='left', fill='x', expand=1)
 
     def browse_rootpath():
         rootpath = filedialog.askdirectory(initialdir=path_init.get())
-        if rootpath[-1] != '/':
-            rootpath += '/'
+        if rootpath[-1] != '\\':
+            rootpath += '\\'
         path_init.set(rootpath)
 
     tk.Button(path_frame, text='Browse', command=browse_rootpath).pack(side='left')
@@ -2668,12 +2759,12 @@ if __name__ == "__main__":
     tk.Entry(folder_frame, textvariable=folder_init).pack(side='left', fill='x', expand=1)
 
     param_frame = tk.Frame(root_paramModel, highlightbackground="black", highlightthickness=1)
-    param_frame.pack(fill='x', padx=5, pady=10)
+    param_frame.pack(fill='x', padx=5, pady=5)
     param_frame1 = tk.Frame(param_frame)
     param_frame1.pack()
-    param_frame2 = tk.Frame(param_frame, height=20)
+    param_frame2 = tk.Frame(param_frame, height=10)
     param_frame2.pack()
-    param_frame3 = tk.Frame(param_frame)
+    param_frame3 = tk.Frame(param_frame, padx=10, pady=10)
     param_frame3.pack()
 
     tk.Label(param_frame1, text='Scenario', padx=20).grid(row=0, column=0)
@@ -2688,34 +2779,55 @@ if __name__ == "__main__":
 
     root_paramModel.worldpath = ''
 
+    world_name = tk.StringVar(value='Empty')
+
     def worldchoice():
         file_path = filedialog.askopenfilename(initialdir=savepath_default + '/Worlds_pyOpenGL',
                                                filetypes=(('CSV files', '*.csv'),
                                                           ('MAT files', '*.mat'),
-                                                          ('All files', '*.*')),
-                                               multiple=False)
+                                                          ('All files', '*.*')))
 
-        root_paramModel.worldpath = file_path
+        if file_path != '':
+            search = True
+            target = -1
+            start = 0
 
+            while search:
+                look = file_path.find('/', start)
+                if look == -1:
+                    search = False
+                else:
+                    target = look
+                    start = look + 1
 
-    tk.Button(param_frame1, text='World', command=worldchoice, padx=20).grid(row=1, column=1)
+            filename = file_path[target + 1:-4]
+
+            world_name.set(filename)
+            root_paramModel.worldpath = file_path
+        else:
+            world_name.set('Empty')
+            root_paramModel.worldpath = ''
 
     tk.Label(param_frame1, text='\u03B2PFN', padx=20).grid(row=0, column=2)
-    betaPFN = tk.StringVar(value=1.0)
+    betaPFN = tk.StringVar(value=str(1.0))
     tk.Entry(param_frame1, textvariable=betaPFN, width=5, justify='center').grid(row=1, column=2)
 
     tk.Label(param_frame1, text='\u03B2h\u0394', padx=20).grid(row=0, column=3)
-    betahDc = tk.StringVar(value=2.1)
+    betahDc = tk.StringVar(value=str(2.1))
     tk.Entry(param_frame1, textvariable=betahDc, width=5, justify='center').grid(row=1, column=3)
 
     tk.Label(param_frame1, text='Nb Exp', padx=20).grid(row=0, column=4)
-    NB_exp = tk.StringVar(value=10)
+    NB_exp = tk.StringVar(value=str(10))
     tk.Entry(param_frame1, textvariable=NB_exp, width=5, justify='center').grid(row=1, column=4)
 
     dispvision = tk.BooleanVar(value=display_vision)
     dispbrain = tk.BooleanVar(value=display_neurons)
-    tk.Checkbutton(param_frame3, text='Display Vision pipeline', variable=dispvision).pack(side='left')
-    tk.Checkbutton(param_frame3, text='Display Brain activity', variable=dispbrain).pack(side='right')
+    # tk.Checkbutton(param_frame3, text='Display Vision pipeline', variable=dispvision).pack(side='left')
+    # tk.Checkbutton(param_frame3, text='Display Brain activity', variable=dispbrain).pack(side='right')
+
+    tk.Button(param_frame3, text='3-D World', command=worldchoice, padx=10).pack(side='left')
+    tk.Label(param_frame3, textvariable=world_name, font=font.Font(size=8, slant='italic'),
+             justify='left', anchor='w', width=40, padx=10).pack(side='left', fill='x', expand=1)
 
     scenar = tk.StringVar(value='CT')
     root_paramModel.launch = False
@@ -2781,7 +2893,8 @@ if __name__ == "__main__":
                        + 'Brain type' + '\t' + BrainType + '\n'
                        + 'Beta_PFN' + '\t' + str(Gain_local) + '\n'
                        + 'Beta_hDelta' + '\t' + str(Gain_global) + '\n'
-                       + 'Motor noise' + '\t' + str(MotorNoise) + '\n')
+                       + 'Motor noise' + '\t' + str(MotorNoise) + '\n'
+                       + '3D world' + '\t' + world_name.get() + '\n')
     filetxt_info.close()
 
     print('')
