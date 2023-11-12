@@ -60,8 +60,8 @@ ground_color = (0.5, 0.3, 0.0)
 
 # sky_color = (.0, .5, 1.0)
 # ground_color = (.6, .3, .0)
-
-
+#########################
+#### Few custom functions
 def angle_to_coords(theta, phi, radius):
     """return coordinates of point on sphere given angles and radius"""
 
@@ -70,6 +70,36 @@ def angle_to_coords(theta, phi, radius):
     z = np.sin(theta)
 
     return x * radius, y * radius, z * radius
+
+
+def wrapTo180(angle):
+    if not isinstance(angle, float):
+        angle_comp = angle.copy()
+
+        if isinstance(angle_comp, np.float64):
+            while angle_comp > 180:
+                angle_comp -= 360
+            while angle_comp < -180:
+                angle_comp += 360
+        elif len(angle_comp) == 1:
+            while angle_comp > 180:
+                angle_comp -= 360
+            while angle_comp < -180:
+                angle_comp += 360
+        else:
+            while np.any(angle_comp > 180):
+                angle_comp[angle_comp > 180] -= 360
+            while np.any(angle_comp < -180):
+                angle_comp[angle_comp < -180] += 360
+
+    else:
+        angle_comp = angle
+        while angle_comp > 180:
+            angle_comp -= 360
+        while angle_comp < -180:
+            angle_comp += 360
+
+    return angle_comp
 
 
 # def read_texture(filename):
@@ -120,6 +150,8 @@ def angle_to_coords(theta, phi, radius):
 #     return textID, img_data, img
 
 
+###################################
+#### 3D objects rendering functions
 def Polygons_generate(x, y, z, color, dimension, batch=None):
     x = x - np.mean(x)
     y = y - np.mean(y)
@@ -340,36 +372,8 @@ def Cone(center, radius, height, num_slices, Color=(0, 0, 0)):
 #     Sphere(center, radius, num_slices, Color=Color, elevation=height*0.9)
 
 
-def wrapTo180(angle):
-    if not isinstance(angle, float):
-        angle_comp = angle.copy()
-
-        if isinstance(angle_comp, np.float64):
-            while angle_comp > 180:
-                angle_comp -= 360
-            while angle_comp < -180:
-                angle_comp += 360
-        elif len(angle_comp) == 1:
-            while angle_comp > 180:
-                angle_comp -= 360
-            while angle_comp < -180:
-                angle_comp += 360
-        else:
-            while np.any(angle_comp > 180):
-                angle_comp[angle_comp > 180] -= 360
-            while np.any(angle_comp < -180):
-                angle_comp[angle_comp < -180] += 360
-
-    else:
-        angle_comp = angle
-        while angle_comp > 180:
-            angle_comp -= 360
-        while angle_comp < -180:
-            angle_comp += 360
-
-    return angle_comp
-
-
+################################################
+#### Eye model -> Geometry and post-process (LI)
 class Eye_obj:
     def __init__(self, ori_gen, radius, nb_ommat, dist_met='uniform', fovea_loc=None):
         self.type = 'eye'
@@ -659,6 +663,8 @@ class Eye_obj:
         return LI_net
 
 
+######################
+#### World-Agent model
 class Agent_sim(pyglet.window.Window):
     def __init__(self, name_saved,
                  Obj_names, Obj_position, Obj_size,
@@ -716,10 +722,11 @@ class Agent_sim(pyglet.window.Window):
 
         # self.lightfv = ctypes.c_float * 4
 
+        ## Dark = empty world
         self.dark = False
+        self.main_batch = pyglet.graphics.Batch() #-> To-do: move object simulation to batch
 
-        self.main_batch = pyglet.graphics.Batch()
-
+        ## 3D world unpacking
         if Obj_names == []:
             self.dark = True
             self.angle2Obj = 0.0
@@ -759,6 +766,7 @@ class Agent_sim(pyglet.window.Window):
             self.Obj_size = Obj_size
             self.angle2Obj = np.arctan2(Obj_position[0][1], Obj_position[0][0])
 
+        ## Neuron record allocation
         self.name_saved = name_saved
         self.Pose_Mat = []
         self.EPG_activity = []
@@ -784,41 +792,32 @@ class Agent_sim(pyglet.window.Window):
         self.Width = width
         self.Height = height
 
+        ## Position allocation
         self.translation_x = 0.0
         self.translation_y = 0.0
         self.translation_z = -0.5  # Height
-
         self.rotation_x = 0.0
         self.rotation_y = 0.0
         self.rotation_z = np.random.uniform(0.0, 360.0, 1)
         # self.rotation_z = np.arctan2((self.position_feeder[1] - self.translation_y),
         #                              (self.position_feeder[0] - self.translation_x)) #orientation_relat # Yaw
-
         self.speed = 0.25 #0.25
         self.it = 0
 
-        self.windowCV = 'Reverse image'
-
         ## Camera parameters
         self.nb_segments = 4
-
         angle_adjust_base = -180 + 360 / self.nb_segments / 2  # -157.5
-
         self.NEAR_CLIPPING_PLANE = 0.1
         self.H_CLIPPING_PLANE = [-0.5, 0.5]
         self.W_CLIPPING_PLANE = [-0.1, 0.1]
         self.FAR_CLIPPING_PLANE = 5000
-
         PixMap_angular = np.zeros((self.Height*self.Width, 2))
-
         Top_cam = self.H_CLIPPING_PLANE[1]
         Bottom_cam = self.H_CLIPPING_PLANE[0]
         Right_cam = self.W_CLIPPING_PLANE[1]
         Left_cam = self.W_CLIPPING_PLANE[0]
-
         width = round(self.Width / self.nb_segments)
         height = round(self.Height)
-
         pixratio_H = abs(Top_cam - Bottom_cam) / height
         pixratio_W = abs(Right_cam - Left_cam) / width
 
@@ -838,7 +837,6 @@ class Agent_sim(pyglet.window.Window):
         # PixMap_X_img = PixMap_angular[:, 1].reshape((Height, Width))
         # PixMap_Y_img = PixMap_angular[:, 0].reshape((Height, Width))
 
-        # self.Monocular_eye = Eye_obj([0, 0], [160.0, 70.0], [40, 20], dist_met='gaussian', fovea_loc=[0, 0])
         self.Monocular_eye = Eye_obj([0, 0], [170.0, 80.0], [40, 20], dist_met='dispersion', fovea_loc=[0, 0])
 
         # imEyeMercator = np.zeros((1800, 3600, 3), np.uint8)
@@ -856,6 +854,7 @@ class Agent_sim(pyglet.window.Window):
         # cv2.imshow('Eye model', imEyeMercator)
         # cv2.waitKey(0)
 
+        ## Save eye model parameters (Ommatidia direction & acceptance angles) -> Each simulation generates different parameters
         name_savedfile = self.name_saved + 'Ommat_receptfields.csv'
         EyeModel_save = np.concatenate((self.Monocular_eye.ommatidies_dir, self.Monocular_eye.ommatidies_acc), axis=1)
         np.savetxt(name_savedfile, EyeModel_save, delimiter=",")
@@ -864,6 +863,8 @@ class Agent_sim(pyglet.window.Window):
         self.Eye_rf_list = []
         self.VisRew_att_rf = np.zeros(len(self.Monocular_eye.ommatidies_ID))
 
+        ## Generate receptive field of each ommatidia (list of pixels/ommatidia from viewport)
+        # -> To-do: register receptive field to eye model
         PixDist_ellipse_img = np.zeros((Height, Width))
         # Cam2Ommat = np.zeros((len(self.Monocular_eye.ommatidies_ID), len(PixMap_angular[:, 0])))
         for iommat in range(len(self.Monocular_eye.ommatidies_ID)):
@@ -885,23 +886,25 @@ class Agent_sim(pyglet.window.Window):
             else:
                 self.VisRew_att_rf[iommat] = 0.0
 
-        self.Ommat_pixelRes = (40, 40)
-        self.Eye_rf, self.ID_ommatidies = eye_generate2(self.Ommat_pixelRes, (self.Height, self.Width))
+        ## Old eye model
+        # self.Ommat_pixelRes = (40, 40)
+        # self.Eye_rf, self.ID_ommatidies = eye_generate2(self.Ommat_pixelRes, (self.Height, self.Width))
+        #
+        # self.Eye_rf_ang = np.zeros((len(self.Eye_rf[:, 0]), 2))
+        # self.Eye_rf_ang[:, 0] = (self.Eye_rf[:, 2] + self.Eye_rf[:, 3])/2
+        # self.Eye_rf_ang[:, 0] = -(self.Eye_rf_ang[:, 0]/max(self.Eye_rf[:, 3]) * 360 - 180)
+        #
+        # self.Eye_rf_ang[:, 1] = (self.Eye_rf[:, 0] + self.Eye_rf[:, 1])/2
+        # # ratio_HW = height/width
+        # ratio_HW = float(width / 4) / float(height)
+        # # print(ratio_HW)
+        # self.Eye_rf_ang[:, 1] = -(self.Eye_rf_ang[:, 1]/max(self.Eye_rf[:, 1]) * 360 - 180) * ratio_HW
+        #
+        # self.Eye_rf_center = self.ID_ommatidies
 
-        self.Eye_rf_ang = np.zeros((len(self.Eye_rf[:, 0]), 2))
-        self.Eye_rf_ang[:, 0] = (self.Eye_rf[:, 2] + self.Eye_rf[:, 3])/2
-        self.Eye_rf_ang[:, 0] = -(self.Eye_rf_ang[:, 0]/max(self.Eye_rf[:, 3]) * 360 - 180)
-
-        self.Eye_rf_ang[:, 1] = (self.Eye_rf[:, 0] + self.Eye_rf[:, 1])/2
-        # ratio_HW = height/width
-        ratio_HW = float(width / 4) / float(height)
-        # print(ratio_HW)
-        self.Eye_rf_ang[:, 1] = -(self.Eye_rf_ang[:, 1]/max(self.Eye_rf[:, 1]) * 360 - 180) * ratio_HW
-
-        self.Eye_rf_center = self.ID_ommatidies
         ## Lateral Inhibition (Eye v2.1 | dispersion)
+        # ===> Now moved to eye model processes
         print('\t-> Lateral inhibition circuit')
-
         self.LatInhib = np.zeros((len(self.Monocular_eye.ommatidies_ID), len(self.Monocular_eye.ommatidies_ID)))
         for iom1 in range(len(self.Monocular_eye.ommatidies_ID)):
             # LI_visu = np.zeros((1800, 3600, 3), np.uint8)
@@ -922,7 +925,6 @@ class Agent_sim(pyglet.window.Window):
                     self.LatInhib[iom1, iom2] = -np.exp(-0.5 * (dist[minimal_dists[imins]]/RatioInhib)**2)
 
         print('\t==> Visiual pipeline generated')
-
         ## CX nets
         ## (eye v2.0)
         self.CX_pn = np.zeros((1, len(self.Monocular_eye.ommatidies_ID)))
@@ -1360,16 +1362,10 @@ class Agent_sim(pyglet.window.Window):
             self.Ret2FBt = np.zeros((2, 3))
             self.Ret2FBt[0, 1] = 2.0
             self.Ret2FBt[1, 1] = 2.0
-        # self.RunAway = 0
-        # self.RunA2FBt = np.zeros((2, 12))
-        # self.RunA2FBt[0, 8:] = 1.0
-        # self.RunA2FBt[1, 8:] = 1.0
         self.VecMemo = 0
         self.VM2FBt = np.zeros((2, 3))
         self.VM2FBt[0, 0] = 0.5
         self.VM2FBt[1, 0] = 0.5
-        # self.VM2FBt[0, 1] = 0.5
-        # self.VM2FBt[1, 1] = 0.5
 
         if self.Scenario == 'CT':
             self.Explo2FBt = np.zeros((2, 3))
@@ -1382,8 +1378,9 @@ class Agent_sim(pyglet.window.Window):
         self.antilearning = False
 
         print('\t==> CX connectivity generated')
-
         ## MB nets
+        # MB model is divided in two lateral MBs but used combined output
+        # To-do: test with lateral inputs
         self.ref_thresh = MB_thresh
 
         if self.Scenario == 'MB':
@@ -1445,11 +1442,6 @@ class Agent_sim(pyglet.window.Window):
         self.init = True
 
         self.CX_updating = True
-
-        self.pathways = 'homing'
-        # self.pathways = 'combined'
-        # self.pathways = 'visumemo'
-        # self.pathways = 'None'
 
         if self.Scenario == 'VD':
             self.Exploration = 1
@@ -2632,7 +2624,7 @@ if __name__ == "__main__":
     Gain_local = 1.5#'R'
 
     # Scenario = 'CT'
-    Scenario = 'VD'
+    # Scenario = 'VD'
     # Scenario = 'VDB'
     # Scenario = 'VM'
     # Scenario = 'VM2'
