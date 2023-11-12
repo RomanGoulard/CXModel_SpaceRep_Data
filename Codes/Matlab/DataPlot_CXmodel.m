@@ -1,0 +1,253 @@
+flush
+warning('off','all')
+
+advance_bar = waitbar(0,'Data loading...');
+
+set(0,'defaultAxesFontSize',4)
+
+%% Folder selection
+folder_simulation = uigetdir('D:\PyCharmProjects\InsectNeuroNano_Results\','Select results folder');
+folder_results = fullfile(folder_simulation, 'Result_files');
+
+cd(folder_simulation)
+if ~exist(fullfile(folder_simulation,'Figures'),'dir')
+    mkdir(fullfile(folder_simulation,'Figures'))
+end
+folder_figures = fullfile(folder_simulation,'Figures');
+
+gainvalues_search = dir('Gains_list.txt');
+gainvalues_bool = logical(~isempty(gainvalues_search));
+
+if gainvalues_bool
+    gainvalues = readtable('Gains_list.txt');
+end
+
+LocParams_rnd = floor(gainvalues.Loc*10)/10 + 0.05;
+GloParams_rnd = floor(gainvalues.Glo*10)/10 + 0.05;
+
+Xvec_gainparam = min(LocParams_rnd):0.1:max(LocParams_rnd);
+Yvec_gainparam = min(GloParams_rnd):0.1:max(GloParams_rnd);
+
+Result_global.ParamMap_count = zeros(length(Xvec_gainparam),length(Yvec_gainparam));
+Result_global.ParamMap_count_time = zeros(length(Xvec_gainparam),length(Yvec_gainparam));
+Result_global.ParamMap_successrate = zeros(length(Xvec_gainparam),length(Yvec_gainparam));
+Result_global.ParamMap_successtime = zeros(length(Xvec_gainparam),length(Yvec_gainparam));
+
+Result_global.VM_ParamMap_count = zeros(length(Xvec_gainparam),length(Yvec_gainparam));
+Result_global.VM_ParamMap_dist2aim = zeros(length(Xvec_gainparam),length(Yvec_gainparam));
+Result_global.VM_HeatmapReturn = [];
+
+if ~isempty(dir('World_items.csv'))
+    ObjWorld = readtable('World_items.csv');
+    World_log = 1;
+else
+    ObjWorld = NaN;
+    World_log = 0;
+end
+
+cd(folder_results)
+
+folder_content = dir(folder_results);
+
+%%
+hDc2PFL = zeros(16,16);
+for in1 = 1:16
+    for in2 = 1:16
+        if (in1 <= 8) && ((in1-in2)==-8)
+            hDc2PFL(in1,in2) = 1.0;
+        elseif (in1 > 8) && ((in1-in2)==8)
+            hDc2PFL(in1,in2) = 1.0;
+        end
+    end
+end
+
+%% Files scan
+CSVfile_list = dir('*.csv');
+CSVfile_list_foodsources = dir('*FoodSources.csv');
+CSVfile_list_XY = dir('*Results_XY.csv');
+
+CSVfile_list_pol = dir('*Polin.csv');
+CSVfile_list_epg = dir('*EPG.csv');
+CSVfile_list_pen = dir('*PEN.csv');
+CSVfile_list_peg = dir('*PEG.csv');
+CSVfile_list_d7 = dir('*D7.csv');
+CSVfile_list_no = dir('*NO.csv');
+CSVfile_list_pfn_temp = dir('*PFN.csv');
+ipfn = 0;
+for ifile = 1:length(CSVfile_list_pfn_temp)
+    if isempty(strfind(CSVfile_list_pfn_temp(ifile).name, 'PImemo'))
+        ipfn = ipfn + 1;
+        CSVfile_list_pfn(ipfn) = CSVfile_list_pfn_temp(ifile);
+    end
+end
+CSVfile_list_pinfn = dir('*PinFN.csv');
+CSVfile_list_hindc = dir('*hinDc.csv');
+CSVfile_list_hdc_temp = dir('*hDc.csv');
+ihdc = 0;
+for ifile = 1:length(CSVfile_list_hdc_temp)
+    if isempty(strfind(CSVfile_list_hdc_temp(ifile).name, 'PImemo'))
+        ihdc = ihdc + 1;
+        CSVfile_list_hdc(ihdc) = CSVfile_list_hdc_temp(ifile);
+    end
+end
+CSVfile_list_pfl = dir('*PFL.csv');
+CSVfile_list_lal = dir('*LAL.csv');
+CSVfile_list_fbt_vecmemo = dir('*FBt_memo.csv');
+CSVfile_list_fbt_hdc_vecmemo = dir('*FBt_hDc_memo.csv');
+
+name_files_foodsources = {CSVfile_list_foodsources.name};
+name_files_XY = {CSVfile_list_XY.name};
+
+name_files_pol = {CSVfile_list_pol.name};
+name_files_epg = {CSVfile_list_epg.name};
+name_files_pen = {CSVfile_list_pen.name};
+name_files_peg = {CSVfile_list_peg.name};
+name_files_d7 = {CSVfile_list_d7.name};
+name_files_no = {CSVfile_list_no.name};
+name_files_pfn = {CSVfile_list_pfn.name};
+name_files_pinfn = {CSVfile_list_pinfn.name};
+name_files_hdc = {CSVfile_list_hdc.name};
+name_files_hindc = {CSVfile_list_hindc.name};
+name_files_pfl = {CSVfile_list_pfl.name};
+name_files_lal = {CSVfile_list_lal.name};
+name_files_fbt_vecmemo = {CSVfile_list_fbt_vecmemo.name};
+name_files_fbt_hdc_vecmemo = {CSVfile_list_fbt_hdc_vecmemo.name};
+
+
+%% Experiments count
+name_files = {CSVfile_list_epg.name};
+numexp_list = nan(1, length(name_files));
+for ifile = 1:length(name_files)
+    num_exp = regexp(name_files{ifile},'\d*','Match');
+    num_exp = str2num(num_exp{1});
+    numexp_list(ifile) = num_exp;
+end
+
+NumExp_list = unique(numexp_list);
+
+%% Main figures generation
+
+fig0_CXinputs.mainfig = figure('position', [50 50 1400 750], 'renderer', 'painters');
+fig0_CXinputs.tabgroup = uitabgroup(fig0_CXinputs.mainfig); % tabgroup
+% if ~exist(fullfile(folder_figures,'XY_temp'),'dir')
+%     mkdir(fullfile(folder_figures,'XY_temp'))
+% end
+
+fig1_XYplot.mainfig = figure('position', [50 50 1400 750], 'renderer', 'painters');
+fig1_XYplot.tabgroup = uitabgroup(fig1_XYplot.mainfig); % tabgroup
+% if ~exist(fullfile(folder_figures,'XY_temp'),'dir')
+%     mkdir(fullfile(folder_figures,'XY_temp'))
+% end
+
+fig2_compass.mainfig = figure('position', [50 50 1400 750], 'renderer', 'painters');
+fig2_compass.tabgroup = uitabgroup(fig2_compass.mainfig); % tabgroup
+% if ~exist(fullfile(folder_figures,'XY_temp'),'dir')
+%     mkdir(fullfile(folder_figures,'XY_temp'))
+% end
+        
+%% Data extraction
+for ifile = 1:length(NumExp_list)
+    waitbar((ifile-1)/length(NumExp_list),advance_bar,['Data processing... (' num2str(ifile) '/' num2str(length(NumExp_list)) ')']);
+    
+    [~,Xgainparam] = min(abs(Xvec_gainparam-LocParams_rnd(ifile)));
+    [~,Ygainparam] = min(abs(Yvec_gainparam-GloParams_rnd(ifile)));
+    Result_global.ParamMap_count(Xgainparam,Ygainparam) = Result_global.ParamMap_count(Xgainparam,Ygainparam)+1;
+    
+    if ifile <= length(name_files_XY)
+    %% Data extraction
+        if ~isempty(name_files_foodsources)
+            data_foodsources = csvread(name_files_foodsources{ifile});
+            if ~isnan(data_foodsources)
+                rot_rho_foodsources = sqrt(data_foodsources(:,1).^2 + data_foodsources(:,2).^2);
+                rot_sig_foodsources = atan2d(-data_foodsources(:,2), data_foodsources(:,1));
+                % Corrected data
+                X_foodsources = cosd(rot_sig_foodsources) .* rot_rho_foodsources;
+                Y_foodsources = sind(rot_sig_foodsources) .* rot_rho_foodsources;
+            end
+        else
+            data_foodsources = NaN;
+        end
+        data_XY = csvread(name_files_XY{ifile});
+        data_compass = csvread(name_files_pol{ifile});
+        data_epg = csvread(name_files_epg{ifile});
+        data_pen = csvread(name_files_pen{ifile});
+        data_peg = csvread(name_files_peg{ifile});
+        data_d7 = csvread(name_files_d7{ifile});
+        data_no = csvread(name_files_no{ifile});
+        data_pfn = csvread(name_files_pfn{ifile});
+        data_pfnin = csvread(name_files_pinfn{ifile});
+        data_hdcin = csvread(name_files_hindc{ifile});
+        data_hdc = csvread(name_files_hdc{ifile});
+        data_pfl = csvread(name_files_pfl{ifile});
+        data_lal = csvread(name_files_lal{ifile});
+        data_fbt2pfn_vecmemo = csvread(name_files_fbt_vecmemo{ifile});
+        data_fbt2hdc_vecmemo = csvread(name_files_fbt_hdc_vecmemo{ifile});
+
+        %% Behavioural data (X, Y and Oz data)
+        X_uncorrected = data_XY(:, 1);
+        Y_uncorrected = data_XY(:, 2);
+        % Python-to-Matlab coordinate adjustement
+        rot_rho = sqrt(X_uncorrected.^2 + Y_uncorrected.^2);
+        rot_sig = atan2d(-Y_uncorrected, X_uncorrected);
+        % Corrected data
+        X = cosd(rot_sig) .* rot_rho;
+        Y = sind(rot_sig) .* rot_rho;
+        Oz = wrapTo180(-data_XY(:, 6));
+        dOz = diff(Oz, 1);
+    
+        figure(fig1_XYplot.mainfig)
+        fig1_XYplot.tab(ifile) = uitab(fig1_XYplot.tabgroup);
+        axes('Parent',fig1_XYplot.tab(ifile));
+        plot(X,Y,'k')
+        xlabel('X')
+        ylabel('Y')
+        daspect([1 1 1])
+
+        %% CX inputs
+        figure(fig0_CXinputs.mainfig)
+        fig0_CXinputs.tab(ifile) = uitab(fig0_CXinputs.tabgroup);
+        axes('Parent',fig0_CXinputs.tab(ifile));
+        
+        subplot(2,1,1)
+        imagesc(data_no')
+
+        subplot(2,1,2)
+        imagesc(data_compass')
+
+
+        %% Compass circuit activity
+        figure(fig2_compass.mainfig)
+        fig2_compass.tab(ifile) = uitab(fig2_compass.tabgroup);
+        axes('Parent',fig2_compass.tab(ifile));
+
+        subplot(5,1,1);
+        Oz_display = Oz;
+        Oz_display(abs(dOz) > 180) = NaN;
+        plot(Oz_display, 'r', 'LineWidth', 1.2)
+        xlim([0 length(X)])
+        ylim([-180 180])
+        ylabel('Orientation (°)')
+
+        subplot(5,1,2)
+        imagesc(data_epg')
+        ylabel('EPG #')
+
+        subplot(5,1,3)
+        imagesc(data_peg')
+        ylabel('PEG #')
+
+        subplot(5,1,4)
+        imagesc(data_pen')
+        ylabel('PEN #')
+
+        subplot(5,1,5)
+        imagesc(data_d7')
+        ylabel('Δ7 #')
+        xlabel('Simulation steps')
+
+    end
+end
+waitbar(1,advance_bar,'All data extracted');
+
+close(advance_bar)
+cd(folder_simulation)
