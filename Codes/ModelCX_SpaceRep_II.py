@@ -714,7 +714,7 @@ class Agent_sim(pyglet.window.Window):
             self.Target_on = True
             angle_random = 45#np.random.uniform(0.0, 360.0, 1)[0]
             self.Target_location = [200 * np.cos(np.radians(angle_random)), 200 * np.sin(np.radians(angle_random))]
-        self.Target_size = [15, 160]
+        self.Target_size = [30, 300]
 
         self.winOmmat = 'Ommatidies activity'
         self.winLI = 'vPNs activity'
@@ -1032,7 +1032,7 @@ class Agent_sim(pyglet.window.Window):
         idx_input_half1 = np.remainder(idx_input_half+shift, 8)
         idx_input_half2 = np.remainder(idx_input_half-shift, 8)
         idx_input = np.concatenate((idx_input_half1, idx_input_half2))
-        span_in = 3
+        span_in = 1
         idx_output_half = np.arange(int(len(self.CX_PB_Delta7)/2))
         idx_output_half = np.remainder(idx_output_half, 8)
         idx_output = np.concatenate((idx_output_half, idx_output_half))
@@ -1068,7 +1068,7 @@ class Agent_sim(pyglet.window.Window):
         idx_input_half1 = np.remainder(idx_input_half+shift, 8)
         idx_input_half2 = np.remainder(idx_input_half-shift, 8)
         idx_input = np.concatenate((idx_input_half1, idx_input_half2))
-        span_in = 3
+        span_in = 1
         idx_output_half = np.arange(int(len(self.CX_PB_PEG)/2))
         idx_output_half = np.remainder(idx_output_half, 8)
         idx_output = np.concatenate((idx_output_half, idx_output_half))
@@ -1104,7 +1104,7 @@ class Agent_sim(pyglet.window.Window):
         idx_input_half1 = np.remainder(idx_input_half+shift, 8)
         idx_input_half2 = np.remainder(idx_input_half-shift, 8)
         idx_input = np.concatenate((idx_input_half1, idx_input_half2))
-        span_in = 3
+        span_in = 1
         idx_output_half = np.arange(int(len(self.CX_PB_PEN)/2))
         idx_output_half = np.remainder(idx_output_half, 8)
         idx_output = np.concatenate((idx_output_half, idx_output_half))
@@ -1153,7 +1153,7 @@ class Agent_sim(pyglet.window.Window):
         idx_input_half1 = np.remainder(idx_input_half+shift, 8)
         idx_input_half2 = np.remainder(idx_input_half-shift, 8)
         idx_input = np.concatenate((idx_input_half1, idx_input_half2))
-        span_in = 3
+        span_in = 1
         idx_output_half = np.arange(int(len(self.CX_PB_PFNc)/2))
         idx_output_half = np.remainder(idx_output_half, 8)
         idx_output = np.concatenate((idx_output_half, idx_output_half))
@@ -1194,7 +1194,7 @@ class Agent_sim(pyglet.window.Window):
         idx_input_half1 = np.remainder(idx_input_half+shift, 8)
         idx_input_half2 = np.remainder(idx_input_half-shift, 8)
         idx_input = np.concatenate((idx_input_half1, idx_input_half2))
-        span_in = 3
+        span_in = 1
         idx_output_half = np.arange(int(len(self.CX_PB_PFL3)/2))
         idx_output_half = np.remainder(idx_output_half, 8)
         idx_output = np.concatenate((idx_output_half, idx_output_half))
@@ -1352,16 +1352,17 @@ class Agent_sim(pyglet.window.Window):
         self.Explo2FBt = np.zeros((2, 3))
         self.Explo2FBt[0, 0] = 0.5
         self.Explo2FBt[1, 0] = 0.5
+        self.Return = 0
+        self.Ret2FBt = np.zeros((2, 3))
         if self.BrainType == 'Settled':
-            self.Return = 0
-            self.Ret2FBt = np.zeros((2, 3))
             self.Ret2FBt[0, 1] = 2.0
             self.Ret2FBt[1, 1] = 0.0
         elif self.BrainType == 'Nomadic':
-            self.Return = 0
-            self.Ret2FBt = np.zeros((2, 3))
             self.Ret2FBt[0, 1] = 2.0
             self.Ret2FBt[1, 1] = 2.0
+        else:
+            self.Ret2FBt[0, 1] = 2.0
+            self.Ret2FBt[1, 1] = 0.0
         self.VecMemo = 0
         self.VM2FBt = np.zeros((2, 3))
         self.VM2FBt[0, 0] = 0.5
@@ -1704,29 +1705,29 @@ class Agent_sim(pyglet.window.Window):
 
         self.CX_NOt = np.asarray([np.sign(self.speed)])
 
-        EB_EPG_temp = (0.8 * self.CX_Polin
-                       + 0.5 * self.CX_PB_PEN @ self.CX_PEN2EPG
-                       + 0.6 * self.CX_PB_PEG @ self.CX_PEG2EPG)
+        EB_EPG_temp = (1.0 * self.CX_Polin
+                       + 0.4 * self.CX_PB_PEN @ self.CX_PEN2EPG
+                       + 0.9 * self.CX_PB_PEG @ self.CX_PEG2EPG)
         EB_EPG_temp[EB_EPG_temp < 0.0] = 0.0
         EB_EPG_temp[EB_EPG_temp > 1.0] = 1.0
 
-        PB_PEN_temp = (0.5 * (self.CX_EB_EPG @ self.CX_EPG2PEN)
-                       + 0.8 * self.CX_NO @ self.CX_NO2PEN
-                       + 0.3 * self.CX_PB_Delta7 @ self.CX_D72PEN)
+        PB_PEN_temp = (0.4 * (self.CX_EB_EPG @ self.CX_EPG2PEN)
+                       + 0.7 * self.CX_NO @ self.CX_NO2PEN
+                       + 1.0 * self.CX_PB_Delta7 @ self.CX_D72PEN)
         PB_PEN_temp[PB_PEN_temp < 0.0] = 0.0
         PB_PEN_temp[PB_PEN_temp > 1.0] = 1.0
 
         PB_PEG_temp = (1.0 * self.CX_EB_EPG @ self.CX_EPG2PEG
-                       + 0.1 * self.CX_PB_Delta7 @ self.CX_D72PEG)
+                       + 1.0 * self.CX_PB_Delta7 @ self.CX_D72PEG)
         PB_PEG_temp[PB_PEG_temp < 0.0] = 0.0
         PB_PEG_temp[PB_PEG_temp > 1.0] = 1.0
 
-        PB_D7_temp = (1.2 * self.CX_EB_EPG @ self.CX_EPG2D7
-                      + 0.1 * self.CX_PB_Delta7 @ self.CX_D72D7)
+        PB_D7_temp = (0.8 * self.CX_EB_EPG @ self.CX_EPG2D7
+                      + 0.0 * self.CX_PB_Delta7 @ self.CX_D72D7)
         PB_D7_temp[PB_D7_temp < 0.0] = 0.0
         PB_D7_temp[PB_D7_temp > 1.0] = 1.0
 
-        PB_PFNc_temp = (0.25 * self.CX_PB_Delta7 @ self.CX_D72PFN
+        PB_PFNc_temp = (0.5 * self.CX_PB_Delta7 @ self.CX_D72PFN
                         + 1.0 * self.CX_NOt @ self.CX_NOt2PFN)
         PB_PFNc_temp[PB_PFNc_temp < 0.0] = 0.0
         PB_PFNc_temp[PB_PFNc_temp > 1.0] = 1.0
@@ -1763,9 +1764,9 @@ class Agent_sim(pyglet.window.Window):
                         + 1.0 * self.CX_FB_FBt_hdc @ self.CX_FBt2hDc) @ self.CX_hDc2PFL
         FB_hDc_input[FB_hDc_input < 0.0] = 0.0
 
-        PB_PFL3_temp = (0.6 * self.CX_PB_Delta7 @ self.CX_D72PFL
-                        + 0.5 * PB_PFNc_input
-                        + 0.5 * FB_hDc_input)
+        PB_PFL3_temp = (0.3 * self.CX_PB_Delta7 @ self.CX_D72PFL
+                        + 1.0 * PB_PFNc_input
+                        + 1.0 * FB_hDc_input)
         PB_PFL3_temp[PB_PFL3_temp < 0.0] = 0.0
         PB_PFL3_temp[PB_PFL3_temp > 1.0] = 1.0
 
@@ -2205,6 +2206,7 @@ class Agent_sim(pyglet.window.Window):
 
             elif self.Scenario == 'VD':
                 if self.Blink & (dist2target < 50):
+                    print('Target off')
                     self.Target_on = False
 
                 dist2target = np.sqrt((self.translation_x - self.Target_location[0]) ** 2 + (self.translation_y - self.Target_location[1]) ** 2)
@@ -2429,70 +2431,70 @@ class Agent_sim(pyglet.window.Window):
                     print('\t==> Homing engaged')
         ###############################
         #### Neurons activity recording
-            # if self.Display_neurons:
-            #     thetas = self.CX_cards/180 * np.pi
-            #     for irow in range(self.ax_tableau2bord.shape[0]):
-            #         for icol in range(self.ax_tableau2bord.shape[1]):
-            #             self.ax_tableau2bord[irow, icol].cla()
-            #     self.ax_tableau2bord[0, 0].bar(np.arange(1, 9)+0.15, self.CX_EB_EPG[0:8], width=0.3, color='r')
-            #     self.ax_tableau2bord[0, 0].bar(np.arange(1, 9)-0.15, self.CX_EB_EPG[8:], width=0.3, color='g')
-            #     self.ax_tableau2bord[0, 0].set_ylim([0.0, 1.0])
-            #     self.ax_tableau2bord[0, 0].title.set_text('EPG')
-            #     self.ax_tableau2bord[0, 1].bar(np.arange(1, 9)+0.15, self.CX_PB_Delta7[0:8], width=0.3, color='r')
-            #     self.ax_tableau2bord[0, 1].bar(np.arange(1, 9)-0.15, self.CX_PB_Delta7[8:], width=0.3, color='g')
-            #     self.ax_tableau2bord[0, 1].set_ylim([0.0, 1.0])
-            #     self.ax_tableau2bord[0, 1].title.set_text('\u03947')
-            #     self.ax_tableau2bord[1, 0].bar(np.arange(1, 9)+0.15, self.CX_PB_PFN_glo[0:8], width=0.3, color='r')
-            #     self.ax_tableau2bord[1, 0].bar(np.arange(1, 9)-0.15, self.CX_PB_PFN_glo[8:], width=0.3, color='g')
-            #     self.ax_tableau2bord[1, 0].set_ylim([0.0, 1.0])
-            #     self.ax_tableau2bord[1, 0].title.set_text('PFNc')
-            #     self.ax_tableau2bord[1, 1].bar(np.arange(1, 9)+0.15, self.CX_FB_hDc[0:8], width=0.3, color='r')
-            #     self.ax_tableau2bord[1, 1].bar(np.arange(1, 9)-0.15, self.CX_FB_hDc[8:], width=0.3, color='g')
-            #     self.ax_tableau2bord[1, 1].set_ylim([0.0, 1.0])
-            #     self.ax_tableau2bord[1, 1].title.set_text('h\u0394c')
-            #     self.ax_tableau2bord[1, 2].bar(np.arange(1, 9)+0.15, self.CX_PB_PFL3[0:8], width=0.3, color='r')
-            #     self.ax_tableau2bord[1, 2].bar(np.arange(1, 9)-0.15, self.CX_PB_PFL3[8:], width=0.3, color='g')
-            #     self.ax_tableau2bord[1, 2].set_ylim([0.0, 1.0])
-            #     self.ax_tableau2bord[1, 2].title.set_text('PFL3')
-            #     self.ax_tableau2bord[2, 0].imshow(self.CX_FBt2PFN)
-            #     self.ax_tableau2bord[2, 0].set_xlabel('FBt')
-            #     self.ax_tableau2bord[2, 0].set_ylabel('PFN')
-            #     self.ax_tableau2bord[2, 0].title.set_text('FBt-to-PFNc')
-            #     self.ax_tableau2bord[2, 1].imshow(self.CX_FBt2hDc)
-            #     self.ax_tableau2bord[2, 1].set_xlabel('FBt')
-            #     self.ax_tableau2bord[2, 1].set_ylabel('h\u0394c')
-            #     self.ax_tableau2bord[2, 1].title.set_text('FBt-to-h\u0394c')
-            #
-            #     self.ax_tableau2bord[2, 2].bar([2, 1], self.CX_LAL, tick_label=['Right', 'Left'])
-            #     self.ax_tableau2bord[2, 2].set_ylim([0, 8])
-            #     self.ax_tableau2bord[2, 2].title.set_text('LAL')
-            #     if self.Exploration == 1:
-            #         color_fleche = 'r'
-            #     else:
-            #         color_fleche = 'g'
-            #     if self.it >= 2:
-            #         self.ax_tableau2bord[0, 2].plot(np.asarray(self.Pose_Mat)[:, 0], np.asarray(self.Pose_Mat)[:, 1], 'b')
-            #         self.ax_tableau2bord[0, 2].plot(np.asarray([self.translation_x, self.translation_x + np.cos(np.radians(self.rotation_z)) * 15]),
-            #                                             np.asarray([self.translation_y, self.translation_y + np.sin(np.radians(self.rotation_z)) * 15]),
-            #                                             color_fleche)
-            #
-            #         for isource in range(self.Food_sources_nb):
-            #             self.ax_tableau2bord[0, 2].plot(self.Food_sources_locationxy[isource][0], self.Food_sources_locationxy[isource][1], 'xc')
-            #             # self.ax_tableau2bord[0, 2].text(self.Food_sources_locationxy[isource][0] + 2, self.Food_sources_locationxy[isource][1] + 2,
-            #             #                                 str(np.round(P_odor[isource], 3)), fontsize=4)
-            #
-            #         if bool(self.Exploration):
-            #             self.ax_tableau2bord[0, 2].text(298, 298, 'Exploration', color='r', fontsize=6, ha='right', va='top')
-            #         elif bool(self.Return):
-            #             self.ax_tableau2bord[0, 2].text(298, 298, 'Return', color='g', fontsize=6, ha='right', va='top')
-            #
-            #         self.ax_tableau2bord[0, 2].title.set_text('XY')
-            #         self.ax_tableau2bord[0, 2].set_xlim([-300, 300])
-            #         self.ax_tableau2bord[0, 2].set_ylim([-300, 300])
-            #         self.ax_tableau2bord[0, 2].set_aspect('equal', adjustable='box')
-            #
-            #     mp.draw()
-            #     mp.pause(0.001)
+            if self.Display_neurons:
+                thetas = self.CX_cards/180 * np.pi
+                for irow in range(self.ax_tableau2bord.shape[0]):
+                    for icol in range(self.ax_tableau2bord.shape[1]):
+                        self.ax_tableau2bord[irow, icol].cla()
+                self.ax_tableau2bord[0, 0].bar(np.arange(1, 9)+0.15, self.CX_EB_EPG[0:8], width=0.3, color='r')
+                self.ax_tableau2bord[0, 0].bar(np.arange(1, 9)-0.15, self.CX_EB_EPG[8:], width=0.3, color='g')
+                self.ax_tableau2bord[0, 0].set_ylim([0.0, 1.0])
+                self.ax_tableau2bord[0, 0].title.set_text('EPG')
+                self.ax_tableau2bord[0, 1].bar(np.arange(1, 9)+0.15, self.CX_PB_Delta7[0:8], width=0.3, color='r')
+                self.ax_tableau2bord[0, 1].bar(np.arange(1, 9)-0.15, self.CX_PB_Delta7[8:], width=0.3, color='g')
+                self.ax_tableau2bord[0, 1].set_ylim([0.0, 1.0])
+                self.ax_tableau2bord[0, 1].title.set_text('\u03947')
+                self.ax_tableau2bord[1, 0].bar(np.arange(1, 9)+0.15, self.CX_PB_PFNc[0:8], width=0.3, color='r')
+                self.ax_tableau2bord[1, 0].bar(np.arange(1, 9)-0.15, self.CX_PB_PFNc[8:], width=0.3, color='g')
+                self.ax_tableau2bord[1, 0].set_ylim([0.0, 1.0])
+                self.ax_tableau2bord[1, 0].title.set_text('PFNc')
+                self.ax_tableau2bord[1, 1].bar(np.arange(1, 9)+0.15, self.CX_FB_hDc[0:8], width=0.3, color='r')
+                self.ax_tableau2bord[1, 1].bar(np.arange(1, 9)-0.15, self.CX_FB_hDc[8:], width=0.3, color='g')
+                self.ax_tableau2bord[1, 1].set_ylim([0.0, 1.0])
+                self.ax_tableau2bord[1, 1].title.set_text('h\u0394c')
+                self.ax_tableau2bord[1, 2].bar(np.arange(1, 9)+0.15, self.CX_PB_PFL3[0:8], width=0.3, color='r')
+                self.ax_tableau2bord[1, 2].bar(np.arange(1, 9)-0.15, self.CX_PB_PFL3[8:], width=0.3, color='g')
+                self.ax_tableau2bord[1, 2].set_ylim([0.0, 1.0])
+                self.ax_tableau2bord[1, 2].title.set_text('PFL3')
+                self.ax_tableau2bord[2, 0].imshow(self.CX_FBt2PFN)
+                self.ax_tableau2bord[2, 0].set_xlabel('FBt')
+                self.ax_tableau2bord[2, 0].set_ylabel('PFN')
+                self.ax_tableau2bord[2, 0].title.set_text('FBt-to-PFNc')
+                self.ax_tableau2bord[2, 1].imshow(self.CX_FBt2hDc)
+                self.ax_tableau2bord[2, 1].set_xlabel('FBt')
+                self.ax_tableau2bord[2, 1].set_ylabel('h\u0394c')
+                self.ax_tableau2bord[2, 1].title.set_text('FBt-to-h\u0394c')
+
+                self.ax_tableau2bord[2, 2].bar([2, 1], self.CX_LAL, tick_label=['Right', 'Left'])
+                self.ax_tableau2bord[2, 2].set_ylim([0, 8])
+                self.ax_tableau2bord[2, 2].title.set_text('LAL')
+                if self.Exploration == 1:
+                    color_fleche = 'g'
+                else:
+                    color_fleche = 'b'
+                if self.it >= 52:
+                    self.ax_tableau2bord[0, 2].plot(np.asarray(self.Pose_Mat)[:, 0], np.asarray(self.Pose_Mat)[:, 1], 'k')
+                    self.ax_tableau2bord[0, 2].plot(np.asarray([self.translation_x, self.translation_x + np.cos(np.radians(self.rotation_z)) * 15]),
+                                                        np.asarray([self.translation_y, self.translation_y + np.sin(np.radians(self.rotation_z)) * 15]),
+                                                        color_fleche)
+
+                    # for isource in range(self.Food_sources_nb):
+                    #     self.ax_tableau2bord[0, 2].plot(self.Food_sources_locationxy[isource][0], self.Food_sources_locationxy[isource][1], 'xc')
+                        # self.ax_tableau2bord[0, 2].text(self.Food_sources_locationxy[isource][0] + 2, self.Food_sources_locationxy[isource][1] + 2,
+                        #                                 str(np.round(P_odor[isource], 3)), fontsize=4)
+
+                    if bool(self.Exploration):
+                        self.ax_tableau2bord[0, 2].text(298, 298, 'Exploration', color='g', fontsize=6, ha='right', va='top')
+                    elif bool(self.Return):
+                        self.ax_tableau2bord[0, 2].text(298, 298, 'Homing', color='b', fontsize=6, ha='right', va='top')
+
+                    self.ax_tableau2bord[0, 2].title.set_text('XY')
+                    self.ax_tableau2bord[0, 2].set_xlim([-300, 300])
+                    self.ax_tableau2bord[0, 2].set_ylim([-300, 300])
+                    self.ax_tableau2bord[0, 2].set_aspect('equal', adjustable='box')
+
+                mp.draw()
+                mp.pause(0.001)
 
             self.NO_activity.append(self.CX_NO.tolist())
             self.Polar_activity.append(self.CX_Polin.tolist())
@@ -2707,12 +2709,12 @@ if __name__ == "__main__":
 
     display_vision = False
     display_neurons = False
-    Gain_height = 3.0
+    Gain_height = 2.0
 
     MotorNoise = 10.0
 
     Gain_global = 2.118#0.0#
-    Gain_local = 1.5#'R'
+    Gain_local = 1.0#'R'
 
     # Scenario = 'CT'
     # Scenario = 'VD'
@@ -2721,9 +2723,6 @@ if __name__ == "__main__":
     # Scenario = 'VM2'
     # Scenario = 'MB'
     # Scenario = 'FS'
-
-    # BrainType = 'Nomadic'
-    BrainType = 'Settled'
 
     now = datetime.datetime.now()
     timetag = now.strftime('_%H%M%S_%Y%m%d')
@@ -2746,8 +2745,11 @@ if __name__ == "__main__":
 
     def browse_rootpath():
         rootpath = filedialog.askdirectory(initialdir=path_init.get())
-        if rootpath[-1] != '\\':
-            rootpath += '\\'
+        try:
+            if rootpath[-1] != '/':
+                rootpath += '/'
+        except:
+            pass
         path_init.set(rootpath)
 
     tk.Button(path_frame, text='Browse', command=browse_rootpath).pack(side='left')
@@ -2770,9 +2772,9 @@ if __name__ == "__main__":
     tk.Label(param_frame1, text='Scenario', padx=20).grid(row=0, column=0)
     scenario_select = tk.StringVar()
     scenario_list = ['Control', 'PI memory', 'Senso Nav', 'Senso Nav (Blink)', 'Route Nav (Straight)',
-                     'Route Nav (Zigzag)', 'Multi feeder']
+                     'Route Nav (Zigzag)', 'Multi feeder (settler)', 'Multi feeder (nomad)']
     scenario_select.set(scenario_list[0])
-    scenario_combo = ttk.Combobox(param_frame1, textvariable=scenario_select, width=15)
+    scenario_combo = ttk.Combobox(param_frame1, textvariable=scenario_select, width=25)
     scenario_combo['values'] = scenario_list
     scenario_combo['state'] = 'readonly'
     scenario_combo.grid(row=1, column=0, padx=20)
@@ -2809,11 +2811,11 @@ if __name__ == "__main__":
             root_paramModel.worldpath = ''
 
     tk.Label(param_frame1, text='\u03B2PFN', padx=20).grid(row=0, column=2)
-    betaPFN = tk.StringVar(value=str(1.0))
+    betaPFN = tk.StringVar(value=str(Gain_local))
     tk.Entry(param_frame1, textvariable=betaPFN, width=5, justify='center').grid(row=1, column=2)
 
     tk.Label(param_frame1, text='\u03B2h\u0394', padx=20).grid(row=0, column=3)
-    betahDc = tk.StringVar(value=str(2.1))
+    betahDc = tk.StringVar(value=str(Gain_global))
     tk.Entry(param_frame1, textvariable=betahDc, width=5, justify='center').grid(row=1, column=3)
 
     tk.Label(param_frame1, text='Nb Exp', padx=20).grid(row=0, column=4)
@@ -2832,7 +2834,9 @@ if __name__ == "__main__":
     scenar = tk.StringVar(value='CT')
     root_paramModel.launch = False
 
+    root_paramModel.BrainType = 'None'
     def startsimu():
+        root_paramModel.BrainType = 'None'
         if scenario_select.get() == scenario_list[0]:
             scenar.set('CT')  # Control simulation (innate motor control)
         elif scenario_select.get() == scenario_list[1]:
@@ -2848,6 +2852,10 @@ if __name__ == "__main__":
             scenar.set('MBZ')  # MB route zigzag
         elif scenario_select.get() == scenario_list[6]:
             scenar.set('FS')  # Multiple food source
+            root_paramModel.BrainType = 'Settled'
+        elif scenario_select.get() == scenario_list[7]:
+            scenar.set('FS')  # Multiple food source
+            root_paramModel.BrainType = 'Nomadic'
 
         root_paramModel.launch = True
 
@@ -2877,6 +2885,8 @@ if __name__ == "__main__":
 
     display_neurons = dispbrain.get()
     display_vision = dispvision.get()
+
+    BrainType = root_paramModel.BrainType
 
     name_folder = path_init.get() + folder_init.get()
     if name_folder[-1] != '/':

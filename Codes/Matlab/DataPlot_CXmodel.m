@@ -66,34 +66,20 @@ CSVfile_list = dir('*.csv');
 CSVfile_list_foodsources = dir('*FoodSources.csv');
 CSVfile_list_XY = dir('*Results_XY.csv');
 
-CSVfile_list_pol = dir('*Polin.csv');
+CSVfile_list_pol = dir('*CIN.csv');
 CSVfile_list_epg = dir('*EPG.csv');
 CSVfile_list_pen = dir('*PEN.csv');
 CSVfile_list_peg = dir('*PEG.csv');
 CSVfile_list_d7 = dir('*D7.csv');
-CSVfile_list_no = dir('*NO.csv');
-CSVfile_list_pfn_temp = dir('*PFN.csv');
-ipfn = 0;
-for ifile = 1:length(CSVfile_list_pfn_temp)
-    if isempty(strfind(CSVfile_list_pfn_temp(ifile).name, 'PImemo'))
-        ipfn = ipfn + 1;
-        CSVfile_list_pfn(ipfn) = CSVfile_list_pfn_temp(ifile);
-    end
-end
+CSVfile_list_no = dir('*NOD.csv');
+CSVfile_list_pfn = dir('*PFN.csv');
 CSVfile_list_pinfn = dir('*PinFN.csv');
+CSVfile_list_hdc = dir('*hDc.csv');
 CSVfile_list_hindc = dir('*hinDc.csv');
-CSVfile_list_hdc_temp = dir('*hDc.csv');
-ihdc = 0;
-for ifile = 1:length(CSVfile_list_hdc_temp)
-    if isempty(strfind(CSVfile_list_hdc_temp(ifile).name, 'PImemo'))
-        ihdc = ihdc + 1;
-        CSVfile_list_hdc(ihdc) = CSVfile_list_hdc_temp(ifile);
-    end
-end
 CSVfile_list_pfl = dir('*PFL.csv');
 CSVfile_list_lal = dir('*LAL.csv');
-CSVfile_list_fbt_vecmemo = dir('*FBt_memo.csv');
-CSVfile_list_fbt_hdc_vecmemo = dir('*FBt_hDc_memo.csv');
+CSVfile_list_fbt_hd_vecmemo = dir('*FBt_HD_memo.csv');
+CSVfile_list_fbt_pi_vecmemo = dir('*FBt_PI_memo.csv');
 
 name_files_foodsources = {CSVfile_list_foodsources.name};
 name_files_XY = {CSVfile_list_XY.name};
@@ -110,8 +96,8 @@ name_files_hdc = {CSVfile_list_hdc.name};
 name_files_hindc = {CSVfile_list_hindc.name};
 name_files_pfl = {CSVfile_list_pfl.name};
 name_files_lal = {CSVfile_list_lal.name};
-name_files_fbt_vecmemo = {CSVfile_list_fbt_vecmemo.name};
-name_files_fbt_hdc_vecmemo = {CSVfile_list_fbt_hdc_vecmemo.name};
+name_files_fbt_hd_vecmemo = {CSVfile_list_fbt_hd_vecmemo.name};
+name_files_fbt_pi_vecmemo = {CSVfile_list_fbt_pi_vecmemo.name};
 
 
 %% Experiments count
@@ -180,8 +166,8 @@ for ifile = 1:length(NumExp_list)
         data_hdc = csvread(name_files_hdc{ifile});
         data_pfl = csvread(name_files_pfl{ifile});
         data_lal = csvread(name_files_lal{ifile});
-        data_fbt2pfn_vecmemo = csvread(name_files_fbt_vecmemo{ifile});
-        data_fbt2hdc_vecmemo = csvread(name_files_fbt_hdc_vecmemo{ifile});
+        data_fbt2pfn_vecmemo = csvread(name_files_fbt_hd_vecmemo{ifile});
+        data_fbt2hdc_vecmemo = csvread(name_files_fbt_pi_vecmemo{ifile});
 
         %% Behavioural data (X, Y and Oz data)
         X_uncorrected = data_XY(:, 1);
