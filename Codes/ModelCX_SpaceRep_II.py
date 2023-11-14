@@ -1608,7 +1608,7 @@ class Agent_sim(pyglet.window.Window):
         MB_learningrate = rate
         self.MB_pn = np.concatenate(self.vision)
 
-        ##APL version
+        ## APL version
         self.MBright_kc = self.MB_pn @ self.MBright_net
         self.MBright_kc /= np.ones_like(self.MB_pn) @ self.MBright_net
         self.MBright_kc = self.MBright_kc# + np.random.uniform(-0.0005, 0.0005, self.MBright_kc.shape)
@@ -1678,8 +1678,6 @@ class Agent_sim(pyglet.window.Window):
         else:
             CX_Visin = np.concatenate(self.vision/np.max(self.vision))
 
-        self.MB_output = (self.MBright_en + self.MBleft_en)/2
-
         self.CX_Vis_att = self.vision_att * self.VisRew_att_rf
         VisRew = np.sum(self.CX_Vis_att)
 
@@ -1702,6 +1700,8 @@ class Agent_sim(pyglet.window.Window):
         if rotLeft > 1.0:
             rotLeft = 1.0
         self.CX_NO = np.asarray((rotLeft, rotRight))
+
+        self.MB_output = (self.MBright_en + self.MBleft_en)/2
 
         self.CX_NOt = np.asarray([np.sign(self.speed)])
 
@@ -2709,7 +2709,7 @@ if __name__ == "__main__":
 
     display_vision = False
     display_neurons = False
-    Gain_height = 2.0
+    Gain_height = 1.0
 
     MotorNoise = 10.0
 
@@ -2829,7 +2829,10 @@ if __name__ == "__main__":
 
     tk.Button(param_frame3, text='3-D World', command=worldchoice, padx=10).pack(side='left')
     tk.Label(param_frame3, textvariable=world_name, font=font.Font(size=8, slant='italic'),
-             justify='left', anchor='w', width=40, padx=10).pack(side='left', fill='x', expand=1)
+             justify='left', anchor='w', width=30, padx=10).pack(side='left', fill='x', expand=1)
+    height_k = tk.DoubleVar(value=Gain_height)
+    tk.Entry(param_frame3, textvariable=height_k, width=4).pack(side='right')
+    tk.Label(param_frame3, text='Height modif').pack(side='right')
 
     scenar = tk.StringVar(value='CT')
     root_paramModel.launch = False
@@ -2887,6 +2890,8 @@ if __name__ == "__main__":
     display_vision = dispvision.get()
 
     BrainType = root_paramModel.BrainType
+
+    Gain_height = height_k.get()
 
     name_folder = path_init.get() + folder_init.get()
     if name_folder[-1] != '/':
