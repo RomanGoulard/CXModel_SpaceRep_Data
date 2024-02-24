@@ -112,7 +112,7 @@ NumExp_list = unique(numexp_list);
 fig0_CXinputs.mainfig = figure('position', [50 60 800 500], 'renderer', 'painters');
 fig0_CXinputs.tabgroup = uitabgroup(fig0_CXinputs.mainfig); % tabgroup
 
-fig1_XYplot.mainfig = figure('position', [125 70 1000 500], 'renderer', 'painters');
+fig1_XYplot.mainfig = figure('position', [125 70 1100 400], 'renderer', 'painters');
 fig1_XYplot.tabgroup = uitabgroup(fig1_XYplot.mainfig); % tabgroup
 
 fig2_compass.mainfig = figure('position', [200 80 800 500], 'renderer', 'painters');
@@ -169,6 +169,7 @@ for ifile = 1:length(NumExp_list)
         dOz = diff(Oz, 1);
         Oz_display = Oz;
         Oz_display(abs(dOz) > 180) = NaN;
+        Reward_in = data_XY(:, end);
 
         Target_position = [300*cosd(-45) 300*sind(-45)];
     
@@ -176,7 +177,7 @@ for ifile = 1:length(NumExp_list)
         fig1_XYplot.tab(ifile) = uitab(fig1_XYplot.tabgroup);
         axes('Parent',fig1_XYplot.tab(ifile));
 
-        subplot(3, 4, [1:2 5:6 9:10])
+        subplot(2, 5, [1:2 6:7])
         hold on
         circle(Target_position(1), Target_position(2), 100, 0.1, 'color', 'b', 'linewidth', 0.1)
         circle(Target_position(1), Target_position(2), 15, 1.0, 'color', 'g', 'linewidth', 1)
@@ -185,33 +186,36 @@ for ifile = 1:length(NumExp_list)
         ylabel('Y', 'FontSize', 11)
         daspect([1 1 1])
 
-        subplot(3, 4, 3:4)
-        plot(X, 'k', 'LineWidth', 1.2)
-        hold on
-        hline(Target_position(1), '', 'color', 'g')
-        ylabel('Orientation (°)', 'FontSize', 9)
-        % xlabel('Simulation steps', 'FontSize', 10)
-
-        subplot(3, 4, 7:8)
-        plot(Y, 'k', 'LineWidth', 1.2)
-        hold on
-        hline(Target_position(2), '', 'color', 'g')
-        ylabel('Orientation (°)', 'FontSize', 9)
-        % xlabel('Simulation steps', 'FontSize', 10)
-
-        Target_relatori = atan2d(-(Y-Target_position(2)), X-Target_position(1));
+        dist2start = sqrt(X.^2 + Y.^2);
+        dist2target = sqrt((Target_position(1) - X).^2 + (Target_position(2) - Y).^2);
+        t_targetblink = find(dist2target<100, 1);
+        targetview = find(Reward_in~=0);
+        targetview_last = targetview(end);
+        disttarget_lastview = dist2target(targetview_last);
+        Target_relatori = atan2d(Target_position(2)-Y, Target_position(1)-X);
         dT_relori = diff(Target_relatori, 1);
         Target_relatori_display = Target_relatori;
         Target_relatori_display(abs(dT_relori) > 180) = NaN;
+
+        subplot(2, 5, 3:5)
+        plot(dist2start, 'k', 'LineWidth', 1.2)
+        hold on
+        plot(dist2target, 'r', 'LineWidth', 1.2)
+        yline(disttarget_lastview, '-.b', 'Last target sight',...
+            'LineWidth', 1.2, 'FontSize', 7)
+        xline(t_targetblink, '-.b', 'Target off',...
+            'LineWidth', 1.2, 'FontSize', 7, 'LabelHorizontalAlignment', 'left')
+        legend('Nest/Start', 'Target', 'FontSize', 8)
+        ylabel('Distance to', 'FontSize', 9)
+        xlabel('Simulation steps', 'FontSize', 9)
         
-        
-        subplot(3, 4, 11:12)
+        subplot(2, 5, 8:10)
         plot(Oz_display, 'k', 'LineWidth', 1.2)
         hold on
         plot(Target_relatori, 'g', 'Linewidth', 1.5)
         ylim([-180 180])
         ylabel('Orientation (°)', 'FontSize', 9)
-        xlabel('Simulation steps', 'FontSize', 10)
+        xlabel('Simulation steps', 'FontSize', 9)
 
         %% CX inputs
         figure(fig0_CXinputs.mainfig)
