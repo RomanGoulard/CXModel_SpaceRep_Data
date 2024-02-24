@@ -10,10 +10,6 @@ folder_simulation = uigetdir('D:\PyCharmProjects\InsectNeuroNano_Results\','Sele
 folder_results = fullfile(folder_simulation, 'Result_files');
 
 cd(folder_simulation)
-if ~exist(fullfile(folder_simulation,'Figures'),'dir')
-    mkdir(fullfile(folder_simulation,'Figures'))
-end
-folder_figures = fullfile(folder_simulation,'Figures');
 
 gainvalues_search = dir('Gains_list.txt');
 gainvalues_bool = logical(~isempty(gainvalues_search));
@@ -113,23 +109,14 @@ NumExp_list = unique(numexp_list);
 
 %% Main figures generation
 
-fig0_CXinputs.mainfig = figure('position', [50 50 1400 750], 'renderer', 'painters');
+fig0_CXinputs.mainfig = figure('position', [50 60 800 500], 'renderer', 'painters');
 fig0_CXinputs.tabgroup = uitabgroup(fig0_CXinputs.mainfig); % tabgroup
-% if ~exist(fullfile(folder_figures,'XY_temp'),'dir')
-%     mkdir(fullfile(folder_figures,'XY_temp'))
-% end
 
-fig1_XYplot.mainfig = figure('position', [50 50 1400 750], 'renderer', 'painters');
+fig1_XYplot.mainfig = figure('position', [125 70 1000 500], 'renderer', 'painters');
 fig1_XYplot.tabgroup = uitabgroup(fig1_XYplot.mainfig); % tabgroup
-% if ~exist(fullfile(folder_figures,'XY_temp'),'dir')
-%     mkdir(fullfile(folder_figures,'XY_temp'))
-% end
 
-fig2_compass.mainfig = figure('position', [50 50 1400 750], 'renderer', 'painters');
+fig2_compass.mainfig = figure('position', [200 80 800 500], 'renderer', 'painters');
 fig2_compass.tabgroup = uitabgroup(fig2_compass.mainfig); % tabgroup
-% if ~exist(fullfile(folder_figures,'XY_temp'),'dir')
-%     mkdir(fullfile(folder_figures,'XY_temp'))
-% end
         
 %% Data extraction
 for ifile = 1:length(NumExp_list)
@@ -180,14 +167,51 @@ for ifile = 1:length(NumExp_list)
         Y = sind(rot_sig) .* rot_rho;
         Oz = wrapTo180(-data_XY(:, 6));
         dOz = diff(Oz, 1);
+        Oz_display = Oz;
+        Oz_display(abs(dOz) > 180) = NaN;
+
+        Target_position = [300*cosd(-45) 300*sind(-45)];
     
         figure(fig1_XYplot.mainfig)
         fig1_XYplot.tab(ifile) = uitab(fig1_XYplot.tabgroup);
         axes('Parent',fig1_XYplot.tab(ifile));
-        plot(X,Y,'k')
-        xlabel('X')
-        ylabel('Y')
+
+        subplot(3, 4, [1:2 5:6 9:10])
+        hold on
+        circle(Target_position(1), Target_position(2), 100, 0.1, 'color', 'b', 'linewidth', 0.1)
+        circle(Target_position(1), Target_position(2), 15, 1.0, 'color', 'g', 'linewidth', 1)
+        plot(X, Y,'k', 'LineWidth', 1.2)
+        xlabel('X', 'FontSize', 11)
+        ylabel('Y', 'FontSize', 11)
         daspect([1 1 1])
+
+        subplot(3, 4, 3:4)
+        plot(X, 'k', 'LineWidth', 1.2)
+        hold on
+        hline(Target_position(1), '', 'color', 'g')
+        ylabel('Orientation (°)', 'FontSize', 9)
+        % xlabel('Simulation steps', 'FontSize', 10)
+
+        subplot(3, 4, 7:8)
+        plot(Y, 'k', 'LineWidth', 1.2)
+        hold on
+        hline(Target_position(2), '', 'color', 'g')
+        ylabel('Orientation (°)', 'FontSize', 9)
+        % xlabel('Simulation steps', 'FontSize', 10)
+
+        Target_relatori = atan2d(-(Y-Target_position(2)), X-Target_position(1));
+        dT_relori = diff(Target_relatori, 1);
+        Target_relatori_display = Target_relatori;
+        Target_relatori_display(abs(dT_relori) > 180) = NaN;
+        
+        
+        subplot(3, 4, 11:12)
+        plot(Oz_display, 'k', 'LineWidth', 1.2)
+        hold on
+        plot(Target_relatori, 'g', 'Linewidth', 1.5)
+        ylim([-180 180])
+        ylabel('Orientation (°)', 'FontSize', 9)
+        xlabel('Simulation steps', 'FontSize', 10)
 
         %% CX inputs
         figure(fig0_CXinputs.mainfig)
@@ -207,29 +231,27 @@ for ifile = 1:length(NumExp_list)
         axes('Parent',fig2_compass.tab(ifile));
 
         subplot(5,1,1);
-        Oz_display = Oz;
-        Oz_display(abs(dOz) > 180) = NaN;
         plot(Oz_display, 'r', 'LineWidth', 1.2)
         xlim([0 length(X)])
         ylim([-180 180])
-        ylabel('Orientation (°)')
+        ylabel('Orientation (°)', 'FontSize', 10)
 
         subplot(5,1,2)
         imagesc(data_epg')
-        ylabel('EPG #')
+        ylabel('EPG #', 'FontSize', 11)
 
         subplot(5,1,3)
         imagesc(data_peg')
-        ylabel('PEG #')
+        ylabel('PEG #', 'FontSize', 11)
 
         subplot(5,1,4)
         imagesc(data_pen')
-        ylabel('PEN #')
+        ylabel('PEN #', 'FontSize', 11)
 
         subplot(5,1,5)
         imagesc(data_d7')
-        ylabel('Δ7 #')
-        xlabel('Simulation steps')
+        ylabel('Δ7 #', 'FontSize', 11)
+        xlabel('Simulation steps', 'FontSize', 15)
 
     end
 end
@@ -237,3 +259,11 @@ waitbar(1,advance_bar,'All data extracted');
 
 close(advance_bar)
 cd(folder_simulation)
+
+save_figure = 0;
+if save_figure == 1
+    if ~exist(fullfile(folder_simulation,'Figures'),'dir')
+        mkdir(fullfile(folder_simulation,'Figures'))
+    end
+    folder_figures = fullfile(folder_simulation,'Figures');
+end
