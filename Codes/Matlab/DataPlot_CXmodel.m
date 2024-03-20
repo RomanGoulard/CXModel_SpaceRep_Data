@@ -117,6 +117,9 @@ fig1_XYplot.tabgroup = uitabgroup(fig1_XYplot.mainfig); % tabgroup
 
 fig2_compass.mainfig = figure('position', [200 80 800 500], 'renderer', 'painters');
 fig2_compass.tabgroup = uitabgroup(fig2_compass.mainfig); % tabgroup
+
+fig3_pathint.mainfig = figure('position', [200 100 800 500], 'renderer', 'painters');
+fig3_pathint.tabgroup = uitabgroup(fig3_pathint.mainfig); % tabgroup
         
 %% Data extraction
 for ifile = 1:length(NumExp_list)
@@ -190,8 +193,12 @@ for ifile = 1:length(NumExp_list)
         dist2target = sqrt((Target_position(1) - X).^2 + (Target_position(2) - Y).^2);
         t_targetblink = find(dist2target<100, 1);
         targetview = find(Reward_in~=0);
-        targetview_last = targetview(end);
-        disttarget_lastview = dist2target(targetview_last);
+        if ~isempty(targetview)
+            targetview_last = targetview(end);
+            disttarget_lastview = dist2target(targetview_last);
+        else
+            disttarget_lastview = NaN;
+        end
         Target_relatori = atan2d(Target_position(2)-Y, Target_position(1)-X);
         dT_relori = diff(Target_relatori, 1);
         Target_relatori_display = Target_relatori;
@@ -203,8 +210,10 @@ for ifile = 1:length(NumExp_list)
         plot(dist2target, 'r', 'LineWidth', 1.2)
         yline(disttarget_lastview, '-.b', 'Last target sight',...
             'LineWidth', 1.2, 'FontSize', 7)
-        xline(t_targetblink, '-.b', 'Target off',...
-            'LineWidth', 1.2, 'FontSize', 7, 'LabelHorizontalAlignment', 'left')
+        if ~isempty(t_targetblink)
+            xline(t_targetblink, '-.b', 'Target off',...
+                'LineWidth', 1.2, 'FontSize', 7, 'LabelHorizontalAlignment', 'left')
+        end
         legend('Nest/Start', 'Target', 'FontSize', 8)
         ylabel('Distance to', 'FontSize', 9)
         xlabel('Simulation steps', 'FontSize', 9)
@@ -257,6 +266,51 @@ for ifile = 1:length(NumExp_list)
         ylabel('Δ7 #', 'FontSize', 11)
         xlabel('Simulation steps', 'FontSize', 15)
 
+        %% PI circuit
+        figure(fig3_pathint.mainfig)
+        fig3_pathint.tab(ifile) = uitab(fig3_pathint.tabgroup);
+        axes('Parent',fig3_pathint.tab(ifile));
+
+        decoup_pt1 = find(dist2start>=200, 1);
+        decoup_pt2 = find(dist2start(decoup_pt1:end)==min(dist2start(decoup_pt1:end)), 1) + decoup_pt1;
+        limits_x = [min(X)-20 max(X)+20];
+        limits_y = [min(Y)-20 max(Y)+20];
+
+        subplot(2, 3, 1)
+        plot(X(1:decoup_pt1), Y(1:decoup_pt1), 'k', 'linewidth', 1.2)
+        hold on
+        xline(0, 'b')
+        yline(0, 'b')
+        xlim(limits_x)
+        ylim(limits_y)
+        daspect([1 1 1])
+
+        subplot(2, 3, 2)
+        plot(X(decoup_pt1:decoup_pt2), Y(decoup_pt1:decoup_pt2), 'k', 'linewidth', 1.2)
+        hold on
+        xline(0, 'b')
+        yline(0, 'b')
+        xlim(limits_x)
+        ylim(limits_y)
+        daspect([1 1 1])
+
+        subplot(2, 3, 3)
+        plot(X(decoup_pt2:end), Y(decoup_pt2:end), 'k', 'linewidth', 1.2)
+        hold on
+        xline(0, 'b')
+        yline(0, 'b')
+        xlim(limits_x)
+        ylim(limits_y)
+        daspect([1 1 1])
+
+        subplot(2, 3, 4:6)
+        imagesc(data_hdc')
+        hold on
+        xline(decoup_pt1, 'r')
+        xline(decoup_pt2, 'r')
+        ylabel('hΔ #', 'FontSize', 12)
+        xlabel('Simulation steps', 'FontSize', 15)
+
     end
 end
 waitbar(1,advance_bar,'All data extracted');
@@ -264,10 +318,27 @@ waitbar(1,advance_bar,'All data extracted');
 close(advance_bar)
 cd(folder_simulation)
 
-save_figure = 0;
-if save_figure == 1
-    if ~exist(fullfile(folder_simulation,'Figures'),'dir')
-        mkdir(fullfile(folder_simulation,'Figures'))
-    end
-    folder_figures = fullfile(folder_simulation,'Figures');
-end
+% f = figure('Position', [100 100 300 180]);
+% uicontrol('Style', 'text', 'string', {'Do you want to save' 'the figures produced?'},...
+%     'units', 'normalized', 'position', [0.1, 0.3, 0.8, 0.4], 'FontSize', 12)
+% yes_btn = uicontrol('Style', 'pushbutton', 'string', 'Yes', 'units', 'normalized', 'position', [0.4, 0.1, 0.1, 0.1], 'Callback',@savefigure);
+% no_btn = uicontrol('Style', 'pushbutton', 'string', 'No', 'units', 'normalized', 'position', [0.5, 0.1, 0.1, 0.1], 'Callback',@nosave);
+% 
+% function savefigure(src, event)
+%     if ~exist(fullfile(folder_simulation,'Figures'),'dir')
+%         mkdir(fullfile(folder_simulation,'Figures'))
+%     end
+%     folder_figures = fullfile(folder_simulation,'Figures');
+% 
+%     figure(fig1_XYplot.mainfig)
+%     print('-painters',fullfile(folder_figures,'XYplot'),'-dsvg')
+%     figure(fig0_CXinputs.mainfig)
+%     print('-painters',fullfile(folder_figures,'CXinputs'),'-dsvg')
+%     figure(fig2_compass.mainfig)
+%     print('-painters',fullfile(folder_figures,'CompassAct'),'-dsvg')
+%     close(f)
+% end
+% 
+% function nosave(src, event)
+%     close(f)
+% end
